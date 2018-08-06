@@ -187,18 +187,27 @@ fn case02() {
     struct Home<'a> {
         progress: TlValue<f32>,
         result: TlValue<Option<&'a str>>,
+        table: TlValue<Table<'a>>,
     }
 
     impl<'a> Home<'a> {
         fn sync(&self, from: usize, to: usize) {
             self.progress.sync(from, to);
             self.result.sync(from, to);
+            self.table.sync(from, to);
         }
+    }
+
+    #[derive(Copy, Clone, Default)]
+    struct Table<'a> {
+        progress: f32,
+        result: &'a str,
     }
 
     let h = Arc::new(Home {
         progress: TlValue::new(0.),
         result: TlValue::new(None),
+        table: TlValue::new(Default::default())
     });
 
     let handle = {
@@ -206,6 +215,9 @@ fn case02() {
         thread::Builder::new().name("1_test".into()).spawn(move || {
             *h.progress.reref() = 1.;
             *h.result.reref() = Some("Big Result");
+            let mut table = h.table.reref();
+            table.progress = 0.5;
+            table.result = "Almost halfway";
         }).unwrap()
     };
 
@@ -213,6 +225,8 @@ fn case02() {
     h.sync(1, 0);
 
     println!("{:?} {:?}", *h.progress.reref(), *h.result.reref());
+    let table  = h.table.reref();
+    println!("{:?} {:?}", table.progress, table.result);
 }
 
 /*
