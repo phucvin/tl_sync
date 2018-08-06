@@ -17,11 +17,11 @@ impl<T> TrustCell<T> {
         }
     }
 
-    fn borrow(&self) -> &T {
+    fn get(&self) -> &T {
         unsafe { &*self.inner.get() }
     }
 
-    fn borrow_mut(&self) -> &mut T {
+    fn get_mut(&self) -> &mut T {
         unsafe { &mut *self.inner.get() }
     }
 }
@@ -41,52 +41,47 @@ fn thread_index() -> usize {
 }
 
 struct TlValue<T: Copy> {
-    arr: Arc<TrustCell<[T; THREADS]>>,
-}
-
-impl<T: Copy> Clone for TlValue<T> {
-    fn clone(&self) -> Self {
-        Self {
-            arr: self.arr.clone(),
-        }
-    }
-}
-
-impl<T: Copy> Deref for TlValue<T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        self.borrow()
-    }
-}
-
-impl<T: Copy> DerefMut for TlValue<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        self.borrow_mut()
-    }
+    arr: TrustCell<[T; THREADS]>,
 }
 
 impl<T: Copy> TlValue<T> {
     fn new(value: T) -> Self {
         Self {
-            arr: Arc::new(TrustCell::new([value; THREADS])),
+            arr: TrustCell::new([value; THREADS]),
         }
     }
 
-    fn borrow(&self) -> &T {
-        &self.arr.borrow()[thread_index()]
-    }
-
-    fn borrow_mut(&self) -> &mut T {
-        &mut self.arr.borrow_mut()[thread_index()]
+    fn reref(&self) -> Reref<T> {
+        Reref {
+            arr: &self.arr,
+        }
     }
 
     fn sync(&self, from: usize, to: usize) {
-        let arr = self.arr.borrow_mut();
+        let arr = self.arr.get_mut();
         arr[to] = arr[from];
     }
 }
 
+struct Reref<'a, T: 'a + Copy> {
+    arr: &'a TrustCell<[T; THREADS]>,
+}
+
+impl<'a, T: Copy> Deref for Reref<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.arr.get()[thread_index()]
+    }
+}
+
+impl<'a, T: Copy> DerefMut for Reref<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.arr.get_mut()[thread_index()]
+    }
+}
+
+/*
 struct TlVec<T: Copy> {
     arr: TrustCell<[Vec<T>; THREADS]>,
 }
@@ -116,7 +111,6 @@ impl<T: Copy> TlVec<T> {
     }
 }
 
-/*
 struct TlMap<T: Clone> {
     arr: TrustCell<[Vec<T>; THREADS]>,
 }
@@ -148,27 +142,31 @@ impl<T: Clone> TlMap<T> {
 */
 
 fn case01() {
-    let a = TlValue::new(1);
+    let a = Arc::new(TlValue::new(1));
     
     let handle = {
-        let mut a = a.clone();
+        let a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
+            let mut a = a.reref();
             println!("test a = {}", *a);
             thread::sleep(time::Duration::from_millis(100));
             println!("Done heavy in test");
             *a = 2;
-            println!("test a = {}", a.borrow());
+            println!("test a = {}", *a);
         }).unwrap()
     };
 
+    let oa = &a;
+    let a = a.reref();
+
     thread::sleep(time::Duration::from_millis(100));
-    println!("main a = {}", a.borrow());
+    println!("main a = {}", *a);
     println!("Done heavy in main");
     handle.join().unwrap();
     
-    a.sync(1, 0);
+    oa.sync(1, 0);
     println!("SYNC");
-    println!("main a = {}", a.borrow());
+    println!("main a = {}", *a);
 }
 
 fn case02() {
@@ -192,15 +190,15 @@ fn case02() {
     let handle = {
         let h = h.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            *h.progress.borrow_mut() = 1.;
-            *h.result.borrow_mut() = Some("Big Result");
+            *h.progress.reref() = 1.;
+            *h.result.reref() = Some("Big Result");
         }).unwrap()
     };
 
     handle.join().unwrap();
     h.sync(1, 0);
 
-    println!("{:?} {:?}", h.progress.borrow(), h.result.borrow());
+    println!("{:?} {:?}", *h.progress.reref(), *h.result.reref());
 }
 
 /*
