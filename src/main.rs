@@ -44,6 +44,20 @@ struct TlValue<T: Copy> {
     arr: TrustCell<[T; THREADS]>,
 }
 
+impl<T: Copy> Deref for TlValue<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.arr.get()[thread_index()]
+    }
+}
+
+impl<T: Copy> DerefMut for TlValue<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.arr.get_mut()[thread_index()]
+    }
+}
+
 impl<T: Copy> TlValue<T> {
     fn new(value: T) -> Self {
         Self {
