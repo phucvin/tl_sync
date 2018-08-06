@@ -1,0 +1,6 @@
+[package]
+name = "tl_sync"
+version = "0.1.0"
+authors = ["phucvin <phucvin2@gmail.com>"]
+
+[dependencies]
