@@ -149,7 +149,7 @@ fn case01() {
         thread::Builder::new().name("1_test".into()).spawn(move || {
             let mut a = a.reref();
             println!("test a = {}", *a);
-            thread::sleep(time::Duration::from_millis(100));
+            thread::sleep(time::Duration::from_millis(20));
             println!("Done heavy in test");
             *a = 2;
             println!("test a = {}", *a);
