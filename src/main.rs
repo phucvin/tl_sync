@@ -119,9 +119,9 @@ impl<T> DerefMut for TlValue<T> {
     }
 }
 
-impl<T: Default + Clone + ManualCopy<T>> TlValue<T> {
+impl<T: Clone + ManualCopy<T>> TlValue<T> {
     fn new(value: T) -> Self {
-        let mut a: [T; THREADS] = Default::default();
+        let mut a: [T; THREADS] = unsafe { std::mem::zeroed() };
         
         for i in 1..THREADS {
             a[i] = value.clone();
@@ -138,15 +138,17 @@ impl<T: Default + Clone + ManualCopy<T>> TlValue<T> {
     }
 }
 
-impl<U: Copy + Default> ManualCopy<Vec<U>> for Vec<U> {
+impl<U: Copy> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
-        self.resize(other.len(), Default::default());
+        let tmp = unsafe { std::mem::zeroed() };
+        self.resize(other.len(), tmp);
         self.copy_from_slice(other);
     }
 }
 
+#[allow(dead_code)]
 fn case01() {
-    let a: TlValue<Vec<u8>> = TlValue::new(vec![1; 1024*1024]);
+    let a: TlValue<Vec<u32>> = TlValue::new(vec![1; 1024*1024]);
     let b: Vec<TlValue<Vec<u8>>> = vec![TlValue::new(vec![1; 100]); 1024*100];
     
     let handle = {
@@ -177,6 +179,11 @@ fn case01() {
     println!("main a = {}", a[0]);
 }
 
+fn case02() {
+
+}
+
 fn main() {
-    case01();
+    // case01();
+    case02();
 }
