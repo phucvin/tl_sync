@@ -1,7 +1,7 @@
 #![feature(box_into_raw_non_null)]
 
 use std::thread;
-use std::cell::UnsafeCell;
+use std::cell::{UnsafeCell, RefCell};
 use std::time;
 use std::ops::{Deref, DerefMut};
 
@@ -117,8 +117,25 @@ impl<T> Deref for Tl<T> {
     }
 }
 
-impl<T: ManualCopy<T>> DerefMut for Tl<T> {
+thread_local! {
+    static DIRTIES: RefCell<Vec<Box<Dirty>>> = RefCell::new(vec![]);
+}
+
+impl<T: ManualCopy<T>> Dirty for Tl<T> {
+    fn sync(&self, from: usize, to: usize) {
+        self.cell.inner_manual_copy(from, to);
+    }
+}
+
+impl<T: 'static + ManualCopy<T>> DerefMut for Tl<T> {
     fn deref_mut(&mut self) -> &mut T {
+        {
+            let tmp = Box::new(self.clone());
+            DIRTIES.with(|d| {
+                d.borrow_mut().push(tmp);
+            });
+        }
+
         self.cell.get_mut()
     }
 }
@@ -141,12 +158,6 @@ impl<T: Clone> Tl<T> {
         Self {
             cell: TrustRc::new(TrustCell::new(a)),
         }
-    }
-}
-
-impl<T: ManualCopy<T>> Dirty for Tl<T> {
-    fn sync(&self, from: usize, to: usize) {
-        self.cell.inner_manual_copy(from, to);
     }
 }
 
@@ -271,10 +282,16 @@ fn case02() {
     let tmp = &r.stack[0].buttons[0];
     println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
 
+    DIRTIES.with(|d| {
+        println!("main dirties count: {}", d.borrow().len());
+        let mut d = d.borrow_mut();
+        d.iter().for_each(|it| it.sync(0, 1));
+        d.clear();
+    });
+
     let handle = {
         let mut r = r.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            println!("{}", r.stack.len());
             let tmp = &mut r.stack[0].buttons[0];
             *tmp.txt = "Play".into();
             *tmp.pos = (90, 60);
