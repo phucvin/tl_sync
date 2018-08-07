@@ -7,7 +7,7 @@ use std::ops::Deref;
 const THREADS: usize = 2;
 
 thread_local! {
-    unsafe static CACHED_THREAD_INDEX: usize = match thread::current().name() {
+    static CACHED_THREAD_INDEX: usize = match thread::current().name() {
         Some("main") => 0,
         Some(name) => (name.as_bytes()[0] - '0' as u8) as usize,
         None => panic!("Invalid thread name to get index")
@@ -19,7 +19,7 @@ unsafe fn thread_index() -> usize {
 }
 
 struct TrustCell<T> {
-    inner: UnsafeCell<[T; THREADS]>,
+    arr: UnsafeCell<[T; THREADS]>,
 }
 
 unsafe impl<T> Sync for TrustCell<T> {}
@@ -27,48 +27,50 @@ unsafe impl<T> Sync for TrustCell<T> {}
 impl<T> TrustCell<T> {
     fn new(arr: [T; THREADS]) -> Self {
         Self {
-            inner: UnsafeCell::new(arr),
+            arr: UnsafeCell::new(arr),
         }
     }
 
     fn get(&self) -> &T {
-        unsafe { &(&*self.inner.get())[thread_index()] }
+        unsafe { &(&*self.arr.get())[thread_index()] }
     }
 
     fn get_mut(&self) -> &mut T {
-        unsafe { &mut (&mut *self.inner.get())[thread_index()] }
+        unsafe { &mut (&mut *self.arr.get())[thread_index()] }
     }
+}
 
-    unsafe fn inner_copy(&self, from: usize, to: usize) {
-        *self.get_mut(to) = *self.get(from);
+impl<T: Copy> TrustCell<T> {
+    fn inner_copy(&self, from: usize, to: usize) {
+        unsafe { (&mut *self.arr.get())[to] = (&*self.arr.get())[from]; }
     }
 }
 
 struct TlValue<T: Copy> {
-    arr: TrustCell<T>,
+    cell: TrustCell<T>,
 }
 
 impl<T: Copy> Deref for TlValue<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        &self.arr.get()
+        &self.cell.get()
     }
 }
 
 impl<T: Copy> TlValue<T> {
     fn new(value: T) -> Self {
         Self {
-            arr: TrustCell::new([value; THREADS]),
+            cell: TrustCell::new([value; THREADS]),
         }
     }
 
     fn to_mut(&self) -> &mut T {
-        self.arr.get_mut()
+        self.cell.get_mut()
     }
 
-    unsafe fn sync(&self, from: usize, to: usize) {
-        self.arr.inner_copy(from, to);
+    fn sync(&self, from: usize, to: usize) {
+        self.cell.inner_copy(from, to);
     }
 }
 
