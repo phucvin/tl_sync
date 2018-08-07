@@ -119,6 +119,12 @@ impl<T> DerefMut for TlValue<T> {
     }
 }
 
+impl<T: Default + Clone + ManualCopy<T>> Default for TlValue<T> {
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
 impl<T: Clone + ManualCopy<T>> TlValue<T> {
     fn new(value: T) -> Self {
         let mut a: [T; THREADS] = unsafe { std::mem::zeroed() };
@@ -148,6 +154,12 @@ impl ManualCopy<String> for String {
     fn copy_from(&mut self, other: &String) {
         self.clear();
         self.push_str(other);
+    }
+}
+
+impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
+    fn copy_from(&mut self, other: &(T1, T2)) {
+        *self = *other;
     }
 }
 
@@ -195,6 +207,23 @@ fn case01() {
 fn case02() {
     let _a: TlValue<usize> = TlValue::new(3);
     let _b: TlValue<String> = TlValue::new("apple".into());
+
+    #[derive(Default)]
+    struct SceneRoot {
+        stack: Vec<Scene>,
+    }
+    #[derive(Default)]
+    struct Scene {
+        title: TlValue<String>,
+        buttons: Vec<Button>,
+    }
+    #[derive(Default)]
+    struct Button {
+        pos: TlValue<(u32, u32)>,
+        txt: TlValue<String>,
+    }
+    let mut r = SceneRoot::default();
+    r.stack.push(Scene::default());
 }
 
 fn main() {
