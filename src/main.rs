@@ -56,11 +56,15 @@ impl<T: Clone> TrustCell<T> {
 
 struct TrustRc<T> {
     ptr: *mut T,
-    org_thread_index: usize,
+    is_org: bool,
 }
+
+unsafe impl<T> Send for TrustRc<T> {}
+unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
+        if !self.is_org { return; }
         unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
         unsafe { std::ptr::drop_in_place(self.ptr); }
     }
@@ -70,7 +74,7 @@ impl<T> Clone for TrustRc<T> {
     fn clone(&self) -> Self {
         Self {
             ptr: self.ptr,
-            org_thread_index: self.org_thread_index,
+            is_org: false,
         }
     }
 }
@@ -87,7 +91,7 @@ impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
         let ret = Self {
             ptr: Box::into_raw_non_null(Box::new(value)).as_ptr(),
-            org_thread_index: unsafe { thread_index() },
+            is_org: true,
         };
         ret
     }
@@ -277,20 +281,29 @@ fn case03() {
 
 fn main() {
     {
-        struct A(i32);
-        impl Drop for A {
-            fn drop(&mut self) {
-                println!("dropped!!");
-            }
-        }
-
         let b;
         {
-            let a = TrustRc::new(std::cell::RefCell::new(A(10)));
+            let a = TrustRc::new(std::cell::RefCell::new(10));
             b = a.clone();
-            a.borrow_mut().0 = 12;
+            *a.borrow_mut() = 12;
         }
-        println!("{}", b.borrow().0);
+        println!("{}", b.borrow());
+        println!();
+    }
+    {
+        let a = TrustRc::new(std::cell::RefCell::new(11));
+        let handle = {
+            let a = a.clone();
+            thread::spawn(move || {
+                thread::sleep(time::Duration::from_millis(10));
+                println!("{}", a.borrow());
+                *a.borrow_mut() = 13;
+                println!("{}", a.borrow());
+            })
+        };
+        println!("{}", a.borrow());
+        std::mem::drop(a);
+        handle.join().unwrap();
         println!();
     }
     //case03();
