@@ -121,10 +121,15 @@ thread_local! {
     static DIRTIES: RefCell<Vec<Box<Dirty>>> = RefCell::new(vec![]);
 }
 
-impl<T: ManualCopy<T>> Dirty for Tl<T> {
-    fn sync(&self, from: usize, to: usize) {
-        self.cell.inner_manual_copy(from, to);
-    }
+fn sync_to(to: usize) {
+    DIRTIES.with(|d| {
+        let from = unsafe{ thread_index() };
+        let mut d = d.borrow_mut();
+
+        println!("sync from {} to {}, total: {}", from, to, d.len());
+        d.iter().for_each(|it| it.sync(from, to));
+        d.clear();
+    });
 }
 
 impl<T: 'static + ManualCopy<T>> DerefMut for Tl<T> {
@@ -137,6 +142,12 @@ impl<T: 'static + ManualCopy<T>> DerefMut for Tl<T> {
         }
 
         self.cell.get_mut()
+    }
+}
+
+impl<T: ManualCopy<T>> Dirty for Tl<T> {
+    fn sync(&self, from: usize, to: usize) {
+        self.cell.inner_manual_copy(from, to);
     }
 }
 
@@ -282,12 +293,7 @@ fn case02() {
     let tmp = &r.stack[0].buttons[0];
     println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
 
-    DIRTIES.with(|d| {
-        println!("main dirties count: {}", d.borrow().len());
-        let mut d = d.borrow_mut();
-        d.iter().for_each(|it| it.sync(0, 1));
-        d.clear();
-    });
+    sync_to(1);
 
     let handle = {
         let mut r = r.clone();
@@ -295,10 +301,15 @@ fn case02() {
             let tmp = &mut r.stack[0].buttons[0];
             *tmp.txt = "Play".into();
             *tmp.pos = (90, 60);
+
+            thread::sleep(time::Duration::from_millis(100));
+            sync_to(0);
         }).unwrap()
     };
-    handle.join().unwrap();
 
+    thread::sleep(time::Duration::from_millis(100));
+    println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
+    handle.join().unwrap();
     println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
 }
 
