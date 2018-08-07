@@ -61,6 +61,7 @@ struct TrustRc<T> {
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
+        unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
         unsafe { std::ptr::drop_in_place(self.ptr); }
     }
 }
