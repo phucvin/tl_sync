@@ -138,6 +138,19 @@ impl<T: Clone + ManualCopy<T>> TlValue<T> {
     }
 }
 
+impl ManualCopy<usize> for usize {
+    fn copy_from(&mut self, other: &usize) {
+        *self = *other;
+    }
+}
+
+impl ManualCopy<String> for String {
+    fn copy_from(&mut self, other: &String) {
+        self.clear();
+        self.push_str(other);
+    }
+}
+
 impl<U: Copy> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
         let tmp = unsafe { std::mem::zeroed() };
@@ -180,7 +193,8 @@ fn case01() {
 }
 
 fn case02() {
-
+    let _a: TlValue<usize> = TlValue::new(3);
+    let _b: TlValue<String> = TlValue::new("apple".into());
 }
 
 fn main() {
