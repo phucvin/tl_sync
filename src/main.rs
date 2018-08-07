@@ -202,12 +202,12 @@ impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
 
 impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
+        println!("manual copy vec {} <- {}", (*self).len(), other.len());
         let tmp = unsafe { std::mem::zeroed() };
         self.resize(other.len(), tmp);
         // TODO use copy_from_slice when possible, for faster (use memcpy)
         self.clone_from_slice(other);
     }
-
 }
 
 #[allow(dead_code)]
@@ -245,8 +245,8 @@ fn case01() {
 
 #[allow(dead_code)]
 fn case02() {
-    let _a: Tl<usize> = Tl::new(3);
-    let _b: Tl<String> = Tl::new("apple".into());
+    // let _a: Tl<usize> = Tl::new(3);
+    // let _b: Tl<String> = Tl::new("apple".into());
 
     #[derive(Clone)]
     struct SceneRoot {
@@ -290,19 +290,20 @@ fn case02() {
         ]),
     });
     
-    let tmp = &r.stack[0].buttons[0];
-    println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
+    println!("{}: {} @ {:?}",
+        *r.stack[0].title,
+        *r.stack[0].buttons[0].txt,
+        *r.stack[0].buttons[0].pos
+    );
 
     sync_to(1);
 
     let handle = {
         let mut r = r.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            *r.stack[0].title = "Test".into();
-            println!("{:?}", unsafe { &* r.stack[0].title.cell.arr.get() });
-            let tmp = &mut r.stack[0].buttons[0];
-            *tmp.txt = "Play".into();
-            *tmp.pos = (90, 60);
+            let tmp = &mut r.stack[0];//.buttons[0];
+            // *tmp.txt = "Play".into();
+            // *tmp.pos = (90, 60);
 
             thread::sleep(time::Duration::from_millis(100));
             sync_to(0);
@@ -310,10 +311,12 @@ fn case02() {
     };
 
     thread::sleep(time::Duration::from_millis(100));
-    println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
     handle.join().unwrap();
-    println!("{:?}", unsafe { &* r.stack[0].title.cell.arr.get() });
-    println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
+    println!("{}: {} @ {:?}",
+        *r.stack[0].title,
+        *r.stack[0].buttons[0].txt,
+        *r.stack[0].buttons[0].pos
+    );
 }
 
 fn main() {
