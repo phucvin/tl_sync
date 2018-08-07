@@ -153,10 +153,11 @@ impl<T: Clone + ManualCopy<T>> TlValue<T> {
     }
 }
 
-impl<U: Copy> ManualCopy<Vec<U>> for Vec<U> {
+impl<U: Copy + Default> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &ManualCopy<Vec<U>>) {
-        //self.resize(other.get_inner().len());
-        self[0] = other.get_inner()[0];
+        let other = other.get_inner();
+        self.resize(other.len(), Default::default());
+        self.copy_from_slice(other);
     }
 
     fn get_inner(&self) -> &Vec<U> {
@@ -165,7 +166,7 @@ impl<U: Copy> ManualCopy<Vec<U>> for Vec<U> {
 }
 
 fn case01() {
-    let a : TlValue<Vec<u8>> = TlValue::new(vec![1; 100]);
+    let a : TlValue<Vec<u8>> = TlValue::new(vec![1; 1024*1024*100]);
     
     let handle = {
         let mut a = a.clone();
