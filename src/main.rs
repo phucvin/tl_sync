@@ -180,57 +180,6 @@ fn case01() {
     println!("main a = {}", a[0]);
 }
 
-/*
-fn case02() {
-    #[derive(Clone)]
-    struct Home<'a> {
-        progress: TlValue<f32>,
-        result: TlValue<Option<&'a str>>,
-        table: TlValue<Table<'a>>,
-        //image_data: TlValue<[f64; 100]>,
-    }
-
-    impl<'a> Home<'a> {
-        fn sync(&self, from: usize, to: usize) {
-            self.progress.sync(from, to);
-            self.result.sync(from, to);
-            self.table.sync(from, to);
-            //self.image_data.sync(from, to);
-        }
-    }
-
-    #[derive(Copy, Clone, Default)]
-    struct Table<'a> {
-        progress: f32,
-        result: &'a str,
-    }
-
-    let h = Home {
-        progress: TlValue::new(0.),
-        result: TlValue::new(None),
-        table: TlValue::new(Default::default()),
-        //image_data: TlValue::new([1.; 100]),
-    };
-
-    let handle = {
-        let mut h = h.clone();
-        thread::Builder::new().name("1_test".into()).spawn(move || {
-            *h.progress = 1.;
-            *h.result = Some("Big Result");
-            let mut table = h.table;
-            table.progress = 0.49;
-            table.result = "Almost halfway";
-        }).unwrap()
-    };
-
-    handle.join().unwrap();
-    h.sync(1, 0);
-
-    println!("{:?} {:?}", *h.progress, *h.result);
-    println!("{:?} {:?}", h.table.progress, h.table.result);
-}
-*/
-
 fn main() {
     case01();
 }
