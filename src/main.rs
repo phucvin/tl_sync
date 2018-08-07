@@ -296,13 +296,13 @@ fn main() {
             let a = a.clone();
             thread::spawn(move || {
                 thread::sleep(time::Duration::from_millis(10));
-                println!("{}", a.borrow());
+                println!("thread {}", a.borrow());
                 *a.borrow_mut() = 13;
-                println!("{}", a.borrow());
+                println!("thread {}", a.borrow());
             })
         };
-        println!("{}", a.borrow());
-        std::mem::drop(a);
+        println!("main {}", a.borrow());
+        //std::mem::drop(a); println!("main drop");
         handle.join().unwrap();
         println!();
     }
