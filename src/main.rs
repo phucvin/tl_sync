@@ -9,7 +9,7 @@ const THREADS: usize = 2;
 thread_local! {
     static CACHED_THREAD_INDEX: usize = match thread::current().name() {
         Some("main") => 0,
-        Some(name) => (name.as_bytes()[0] - '0' as u8) as usize,
+        Some(name) => 1 + (name.as_bytes()[0] - '1' as u8) as usize,
         None => panic!("Invalid thread name to get index")
     };
 }
@@ -43,6 +43,43 @@ impl<T> TrustCell<T> {
 impl<T: Copy> TrustCell<T> {
     fn inner_copy(&self, from: usize, to: usize) {
         unsafe { (&mut *self.arr.get())[to] = (&*self.arr.get())[from]; }
+    }
+}
+
+impl<T: Clone> TrustCell<T> {
+    fn inner_clone(&self, from: usize, to: usize) {
+        unsafe { (&mut *self.arr.get())[to] = (&*self.arr.get())[from].clone(); }
+    }
+}
+
+struct TrustRc<T> {
+    ptr: *const T,
+    value: Option<T>,
+}
+
+impl<T> Clone for TrustRc<T> {
+    fn clone(&self) -> Self {
+        Self {
+            ptr: self.ptr,
+            value: None,
+        }
+    }
+}
+
+impl<T> Deref for TrustRc<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        unsafe { &*self.ptr }
+    }
+}
+
+impl<T> TrustRc<T> {
+    fn new(value: T) -> Self {
+        Self {
+            ptr: &value as *const T,
+            value: Some(value),
+        }
     }
 }
 
