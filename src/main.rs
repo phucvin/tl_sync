@@ -229,13 +229,15 @@ fn case02() {
     #[derive(Clone)]
     struct SceneRoot {
         stack: Tl<Vec<Scene>>,
-        unique_scene: Tl<Option<Scene>>,
+        popup: Tl<Option<Scene>>,
+        top_ui: Tl<Button>,
     }
     impl Default for SceneRoot {
         fn default() -> Self {
             Self {
                 stack: Default::default(),
-                unique_scene: Tl::new(None),
+                popup: Tl::new(None),
+                top_ui: Tl::new(Default::default()),
             }
         }
     }
