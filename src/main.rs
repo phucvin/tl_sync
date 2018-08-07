@@ -1,7 +1,6 @@
 #![feature(box_into_raw_non_null)]
 
 use std::thread;
-use std::sync::Arc;
 use std::cell::UnsafeCell;
 use std::time;
 use std::ops::Deref;
@@ -59,7 +58,7 @@ struct TrustRc<T> {
     is_org: bool,
 }
 
-impl<T> Send for TrustRc<T> {}
+unsafe impl<T> Send for TrustRc<T> {}
 unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
@@ -98,7 +97,15 @@ impl<T> TrustRc<T> {
 }
 
 struct TlValue<T: Copy> {
-    cell: TrustCell<T>,
+    cell: TrustRc<TrustCell<T>>,
+}
+
+impl<T: Copy> Clone for TlValue<T> {
+    fn clone(&self) -> Self {
+        Self {
+            cell: self.cell.clone(),
+        }
+    }
 }
 
 impl<T: Copy> Deref for TlValue<T> {
@@ -112,7 +119,7 @@ impl<T: Copy> Deref for TlValue<T> {
 impl<T: Copy> TlValue<T> {
     fn new(value: T) -> Self {
         Self {
-            cell: TrustCell::new([value; THREADS]),
+            cell: TrustRc::new(TrustCell::new([value; THREADS])),
         }
     }
 
@@ -186,32 +193,31 @@ impl<T: Clone> TlMap<T> {
 */
 
 fn case01() {
-    struct A(TlValue<i32>);
-
-    let a = Arc::new(A(TlValue::new(1)));
+    let a = TlValue::new(1);
     
     let handle = {
         let a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            println!("test a = {}", *a.0);
+            println!("test a = {}", *a);
             thread::sleep(time::Duration::from_millis(20));
             println!("Done heavy in test");
-            *a.0.to_mut() = 2;
-            println!("test a = {}", *a.0);
+            *a.to_mut() = 2;
+            println!("test a = {}", *a);
         }).unwrap()
     };
 
     thread::sleep(time::Duration::from_millis(100));
-    println!("main a = {}", *a.0);
+    println!("main a = {}", *a);
     println!("Done heavy in main");
     handle.join().unwrap();
     
-    a.0.sync(1, 0);
+    a.sync(1, 0);
     println!("SYNC");
-    println!("main a = {}", *a.0);
+    println!("main a = {}", *a);
 }
 
 fn case02() {
+    #[derive(Clone)]
     struct Home<'a> {
         progress: TlValue<f32>,
         result: TlValue<Option<&'a str>>,
@@ -232,11 +238,11 @@ fn case02() {
         result: &'a str,
     }
 
-    let h = Arc::new(Home {
+    let h = Home {
         progress: TlValue::new(0.),
         result: TlValue::new(None),
         table: TlValue::new(Default::default())
-    });
+    };
 
     let handle = {
         let h = h.clone();
