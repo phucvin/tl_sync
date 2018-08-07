@@ -55,6 +55,8 @@ impl<T: Clone> TrustCell<T> {
     }
 }
 
+// TODO In-place Copy
+
 struct TrustRc<T> {
     ptr: *mut T,
     is_org: bool,
@@ -143,7 +145,7 @@ impl<T: Clone> TlValue<T> {
 }
 
 fn case01() {
-    let a : TlValue<[u8; 100]> = TlValue::new([1; 100]);
+    let a : TlValue<Vec<u8>> = TlValue::new(vec![1; 1024*1024*100]);
     
     let handle = {
         let mut a = a.clone();
