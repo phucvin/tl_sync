@@ -42,6 +42,8 @@ impl<T> TrustCell<T> {
 }
 
 impl<T: Copy> TrustCell<T> {
+    // TODO Use copy when possible
+    #[allow(dead_code)]
     fn inner_copy(&self, from: usize, to: usize) {
         unsafe { (&mut *self.arr.get())[to] = (&*self.arr.get())[from]; }
     }
@@ -121,23 +123,8 @@ impl<T> DerefMut for TlValue<T> {
     }
 }
 
-impl<T: Copy> TlValue<T> {
-    fn new(value: T) -> Self {
-        Self {
-            cell: TrustRc::new(TrustCell::new([value; THREADS])),
-        }
-    }
-
-    fn sync(&self, from: usize, to: usize) {
-        let now = time::Instant::now();
-        self.cell.inner_copy(from, to);
-        let duration = now.elapsed();
-        println!("sync_copy takes {}s + {}ns", duration.as_secs(), duration.subsec_nanos());
-    }
-}
-
 impl<T: Clone> TlValue<T> {
-    fn new_clone(value: T) -> Self {
+    fn new(value: T) -> Self {
         // TODO Flexible array with THREADS
         let tmp1 = value.clone();
         // let tmp2 = value.clone();
@@ -147,7 +134,7 @@ impl<T: Clone> TlValue<T> {
         }
     }
 
-    fn sync_clone(&self, from: usize, to: usize) {
+    fn sync(&self, from: usize, to: usize) {
         let now = time::Instant::now();
         self.cell.inner_clone(from, to);
         let duration = now.elapsed();
@@ -156,7 +143,7 @@ impl<T: Clone> TlValue<T> {
 }
 
 fn case01() {
-    let a : TlValue<[u8; 100]> = TlValue::new_clone([1; 100]);
+    let a : TlValue<[u8; 100]> = TlValue::new([1; 100]);
     
     let handle = {
         let mut a = a.clone();
@@ -174,7 +161,7 @@ fn case01() {
     println!("Done heavy in main");
     handle.join().unwrap();
     
-    a.sync_clone(1, 0);
+    a.sync(1, 0);
     println!("SYNC");
     println!("main a = {}", a[0]);
 }
