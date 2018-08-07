@@ -19,6 +19,11 @@ unsafe fn thread_index() -> usize {
     CACHED_THREAD_INDEX.with(|c| *c)
 }
 
+trait ManualCopy<T> {
+    fn copy_from(&mut self, &ManualCopy<T>);
+    fn get_inner(&self) -> &T;
+}
+
 struct TrustCell<T> {
     arr: UnsafeCell<[T; THREADS]>,
 }
@@ -55,7 +60,11 @@ impl<T: Clone> TrustCell<T> {
     }
 }
 
-// TODO In-place Copy
+impl<T: ManualCopy<T>> TrustCell<T>  {
+    fn inner_manual_copy(&self, from: usize, to: usize) {
+        unsafe { (&mut *self.arr.get())[to].copy_from(&(&*self.arr.get())[from]); }
+    }
+}
 
 struct TrustRc<T> {
     ptr: *mut T,
@@ -125,7 +134,7 @@ impl<T> DerefMut for TlValue<T> {
     }
 }
 
-impl<T: Clone> TlValue<T> {
+impl<T: Clone + ManualCopy<T>> TlValue<T> {
     fn new(value: T) -> Self {
         // TODO Flexible array with THREADS
         let tmp1 = value.clone();
@@ -138,18 +147,25 @@ impl<T: Clone> TlValue<T> {
 
     fn sync(&self, from: usize, to: usize) {
         let now = time::Instant::now();
-        self.cell.inner_clone(from, to);
+        self.cell.inner_manual_copy(from, to);
         let duration = now.elapsed();
         println!("sync_clone takes {}s + {}ns", duration.as_secs(), duration.subsec_nanos());
     }
 }
 
-trail ManualCopy {
+impl<U: Copy> ManualCopy<Vec<U>> for Vec<U> {
+    fn copy_from(&mut self, other: &ManualCopy<Vec<U>>) {
+        //self.resize(other.get_inner().len());
+        self[0] = other.get_inner()[0];
+    }
 
+    fn get_inner(&self) -> &Vec<U> {
+        &self
+    }
 }
 
 fn case01() {
-    let a : TlValue<Vec<u8>> = TlValue::new(vec![1; 1024*1024]);
+    let a : TlValue<Vec<u8>> = TlValue::new(vec![1; 100]);
     
     let handle = {
         let mut a = a.clone();
@@ -172,7 +188,7 @@ fn case01() {
     println!("main a = {}", a[0]);
 }
 
-#[allow(dead_code)]
+/*
 fn case02() {
     #[derive(Clone)]
     struct Home<'a> {
@@ -221,6 +237,7 @@ fn case02() {
     println!("{:?} {:?}", *h.progress, *h.result);
     println!("{:?} {:?}", h.table.progress, h.table.result);
 }
+*/
 
 fn main() {
     //case02();
