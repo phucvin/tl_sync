@@ -55,12 +55,13 @@ impl<T: Clone> TrustCell<T> {
 }
 
 struct TrustRc<T> {
-    ptr: *const T,
+    ptr: *mut T,
     org_thread_index: usize,
 }
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
+        unsafe { std::ptr::drop_in_place(self.ptr); }
     }
 }
 
