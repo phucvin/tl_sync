@@ -4,7 +4,6 @@ use std::thread;
 use std::cell::UnsafeCell;
 use std::time;
 use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
 
 const THREADS: usize = 2;
 
@@ -94,11 +93,11 @@ impl<T> TrustRc<T> {
     }
 }
 
-struct TlValue<T> {
+struct Tl<T> {
     cell: TrustRc<TrustCell<T>>,
 }
 
-impl<T> Clone for TlValue<T> {
+impl<T> Clone for Tl<T> {
     fn clone(&self) -> Self {
         Self {
             cell: self.cell.clone(),
@@ -106,7 +105,7 @@ impl<T> Clone for TlValue<T> {
     }
 }
 
-impl<T> Deref for TlValue<T> {
+impl<T> Deref for Tl<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -114,19 +113,19 @@ impl<T> Deref for TlValue<T> {
     }
 }
 
-impl<T> DerefMut for TlValue<T> {
+impl<T> DerefMut for Tl<T> {
     fn deref_mut(&mut self) -> &mut T {
         self.cell.get_mut()
     }
 }
 
-impl<T: Default + Clone + ManualCopy<T>> Default for TlValue<T> {
+impl<T: Default + Clone + ManualCopy<T>> Default for Tl<T> {
     fn default() -> Self {
         Self::new(T::default())
     }
 }
 
-impl<T: Clone + ManualCopy<T>> TlValue<T> {
+impl<T: Clone + ManualCopy<T>> Tl<T> {
     fn new(value: T) -> Self {
         let mut a: [T; THREADS] = unsafe { std::mem::zeroed() };
         
@@ -142,6 +141,21 @@ impl<T: Clone + ManualCopy<T>> TlValue<T> {
 
     fn sync(&self, from: usize, to: usize) {
         self.cell.inner_manual_copy(from, to);
+    }
+}
+
+impl<T: Clone> Tl<T> {
+    fn new_root(value: T) -> Self {
+        let mut a: [T; THREADS] = unsafe { std::mem::zeroed() };
+        
+        for i in 1..THREADS {
+            a[i] = value.clone();
+        }
+        a[0] = value;
+
+        Self {
+            cell: TrustRc::new(TrustCell::new(a)),
+        }
     }
 }
 
@@ -174,8 +188,8 @@ impl<U: Copy> ManualCopy<Vec<U>> for Vec<U> {
 
 #[allow(dead_code)]
 fn case01() {
-    let a: TlValue<Vec<u32>> = TlValue::new(vec![1; 1024*1024]);
-    let b: Vec<TlValue<Vec<u8>>> = vec![TlValue::new(vec![1; 100]); 1024*100];
+    let a: Tl<Vec<u32>> = Tl::new(vec![1; 1024*1024]);
+    let b: Vec<Tl<Vec<u8>>> = vec![Tl::new(vec![1; 100]); 1024*100];
     
     let handle = {
         let mut a = a.clone();
@@ -206,30 +220,30 @@ fn case01() {
 }
 
 fn case02() {
-    let _a: TlValue<usize> = TlValue::new(3);
-    let _b: TlValue<String> = TlValue::new("apple".into());
+    let _a: Tl<usize> = Tl::new(3);
+    let _b: Tl<String> = Tl::new("apple".into());
 
-    #[derive(Default)]
+    #[derive(Default, Clone)]
     struct SceneRoot {
         stack: Vec<Scene>,
     }
-    #[derive(Default)]
+    #[derive(Default, Clone)]
     struct Scene {
-        title: TlValue<String>,
+        title: Tl<String>,
         buttons: Vec<Button>,
     }
-    #[derive(Default)]
+    #[derive(Default, Clone)]
     struct Button {
-        pos: TlValue<(u32, u32)>,
-        txt: TlValue<String>,
+        pos: Tl<(u32, u32)>,
+        txt: Tl<String>,
     }
-    let r = TlValue::new(ArSceneRoot::default());
+    let mut r = Tl::new_root(SceneRoot::default());
     r.stack.push(Scene {
-        title: TlValue::new("Home".into()),
+        title: Tl::new("Home".into()),
         buttons: vec![
             Button {
-                pos: TlValue::new((100, 50)),
-                txt: TlValue::new("Click Me!".into()),
+                pos: Tl::new((100, 50)),
+                txt: Tl::new("Click Me!".into()),
             }
         ],
     });
