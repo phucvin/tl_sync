@@ -1,8 +1,8 @@
 use std::thread;
 use std::sync::Arc;
-use std::cell::{UnsafeCell};
+use std::cell::UnsafeCell;
 use std::time;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 struct TrustCell<T> {
     inner: UnsafeCell<T>,
@@ -52,12 +52,6 @@ impl<T: Copy> Deref for TlValue<T> {
     }
 }
 
-impl<T: Copy> DerefMut for TlValue<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.arr.get_mut()[thread_index()]
-    }
-}
-
 impl<T: Copy> TlValue<T> {
     fn new(value: T) -> Self {
         Self {
@@ -65,33 +59,13 @@ impl<T: Copy> TlValue<T> {
         }
     }
 
-    fn reref(&self) -> Reref<T> {
-        Reref {
-            arr: &self.arr,
-        }
+    fn to_mut(&self) -> &mut T {
+        &mut self.arr.get_mut()[thread_index()]
     }
 
     fn sync(&self, from: usize, to: usize) {
         let arr = self.arr.get_mut();
         arr[to] = arr[from];
-    }
-}
-
-struct Reref<'a, T: 'a + Copy> {
-    arr: &'a TrustCell<[T; THREADS]>,
-}
-
-impl<'a, T: Copy> Deref for Reref<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        &self.arr.get()[thread_index()]
-    }
-}
-
-impl<'a, T: Copy> DerefMut for Reref<'a, T> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.arr.get_mut()[thread_index()]
     }
 }
 
@@ -161,26 +135,22 @@ fn case01() {
     let handle = {
         let a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            let mut a = a.reref();
-            println!("test a = {}", *a);
+            println!("test a = {}", **a);
             thread::sleep(time::Duration::from_millis(20));
             println!("Done heavy in test");
-            *a = 2;
-            println!("test a = {}", *a);
+            *a.to_mut() = 2;
+            println!("test a = {}", **a);
         }).unwrap()
     };
 
-    let oa = &a;
-    let a = a.reref();
-
     thread::sleep(time::Duration::from_millis(100));
-    println!("main a = {}", *a);
+    println!("main a = {}", **a);
     println!("Done heavy in main");
     handle.join().unwrap();
     
-    oa.sync(1, 0);
+    a.sync(1, 0);
     println!("SYNC");
-    println!("main a = {}", *a);
+    println!("main a = {}", **a);
 }
 
 fn case02() {
@@ -213,10 +183,10 @@ fn case02() {
     let handle = {
         let h = h.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            *h.progress.reref() = 1.;
-            *h.result.reref() = Some("Big Result");
-            let mut table = h.table.reref();
-            table.progress = 0.5;
+            *h.progress.to_mut() = 1.;
+            *h.result.to_mut() = Some("Big Result");
+            let table = h.table.to_mut();
+            table.progress = 0.49;
             table.result = "Almost halfway";
         }).unwrap()
     };
@@ -224,8 +194,8 @@ fn case02() {
     handle.join().unwrap();
     h.sync(1, 0);
 
-    println!("{:?} {:?}", *h.progress.reref(), *h.result.reref());
-    let table  = h.table.reref();
+    println!("{:?} {:?}", *h.progress, *h.result);
+    let table  = &h.table;
     println!("{:?} {:?}", table.progress, table.result);
 }
 
