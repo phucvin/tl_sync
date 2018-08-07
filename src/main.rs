@@ -88,19 +88,18 @@ impl<T> Deref for TrustRc<T> {
 
 impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
-        let ret = Self {
+        Self {
             ptr: Box::into_raw_non_null(Box::new(value)).as_ptr(),
             is_org: true,
-        };
-        ret
+        }
     }
 }
 
-struct TlValue<T: Copy> {
+struct TlValue<T> {
     cell: TrustRc<TrustCell<T>>,
 }
 
-impl<T: Copy> Clone for TlValue<T> {
+impl<T> Clone for TlValue<T> {
     fn clone(&self) -> Self {
         Self {
             cell: self.cell.clone(),
@@ -108,7 +107,7 @@ impl<T: Copy> Clone for TlValue<T> {
     }
 }
 
-impl<T: Copy> Deref for TlValue<T> {
+impl<T> Deref for TlValue<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -116,7 +115,7 @@ impl<T: Copy> Deref for TlValue<T> {
     }
 }
 
-impl<T: Copy> DerefMut for TlValue<T> {
+impl<T> DerefMut for TlValue<T> {
     fn deref_mut(&mut self) -> &mut T {
         self.cell.get_mut()
     }
@@ -130,40 +129,64 @@ impl<T: Copy> TlValue<T> {
     }
 
     fn sync(&self, from: usize, to: usize) {
+        let now = time::Instant::now();
         self.cell.inner_copy(from, to);
+        let duration = now.elapsed();
+        println!("sync_copy takes {}s + {}ns", duration.as_secs(), duration.subsec_nanos());
+    }
+}
+
+impl<T: Clone> TlValue<T> {
+    fn new_clone(value: T) -> Self {
+        // TODO Flexible array with THREADS
+        let tmp1 = value.clone();
+        // let tmp2 = value.clone();
+
+        Self {
+            cell: TrustRc::new(TrustCell::new([value, tmp1])),
+        }
+    }
+
+    fn sync_clone(&self, from: usize, to: usize) {
+        let now = time::Instant::now();
+        self.cell.inner_clone(from, to);
+        let duration = now.elapsed();
+        println!("sync_clone takes {}s + {}ns", duration.as_secs(), duration.subsec_nanos());
     }
 }
 
 fn case01() {
-    let a = TlValue::new(1);
+    let a : TlValue<[u8; 100]> = TlValue::new_clone([1; 100]);
     
     let handle = {
         let mut a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            println!("test a = {}", *a);
+            println!("test a = {}", a[0]);
             thread::sleep(time::Duration::from_millis(20));
             println!("Done heavy in test");
-            *a = 2;
-            println!("test a = {}", *a);
+            a[0] = 2;
+            println!("test a = {}", a[0]);
         }).unwrap()
     };
 
     thread::sleep(time::Duration::from_millis(100));
-    println!("main a = {}", *a);
+    println!("main a = {}", a[0]);
     println!("Done heavy in main");
     handle.join().unwrap();
     
-    a.sync(1, 0);
+    a.sync_clone(1, 0);
     println!("SYNC");
-    println!("main a = {}", *a);
+    println!("main a = {}", a[0]);
 }
 
+#[allow(dead_code)]
 fn case02() {
     #[derive(Clone)]
     struct Home<'a> {
         progress: TlValue<f32>,
         result: TlValue<Option<&'a str>>,
         table: TlValue<Table<'a>>,
+        //image_data: TlValue<[f64; 100]>,
     }
 
     impl<'a> Home<'a> {
@@ -171,6 +194,7 @@ fn case02() {
             self.progress.sync(from, to);
             self.result.sync(from, to);
             self.table.sync(from, to);
+            //self.image_data.sync(from, to);
         }
     }
 
@@ -183,7 +207,8 @@ fn case02() {
     let h = Home {
         progress: TlValue::new(0.),
         result: TlValue::new(None),
-        table: TlValue::new(Default::default())
+        table: TlValue::new(Default::default()),
+        //image_data: TlValue::new([1.; 100]),
     };
 
     let handle = {
@@ -201,11 +226,11 @@ fn case02() {
     h.sync(1, 0);
 
     println!("{:?} {:?}", *h.progress, *h.result);
-    println!("{:?} {:?}", (*h.table).progress, (*h.table).result);
+    println!("{:?} {:?}", h.table.progress, h.table.result);
 }
 
 fn main() {
-    case02();
+    //case02();
     println!();
     case01();
 }
