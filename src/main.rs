@@ -46,20 +46,6 @@ impl<T> TrustCell<T> {
     }
 }
 
-impl<T: Copy> TrustCell<T> {
-    // TODO Use copy when possible
-    #[allow(dead_code)]
-    fn inner_copy(&self, from: usize, to: usize) {
-        unsafe { (&mut *self.arr.get())[to] = (&*self.arr.get())[from]; }
-    }
-}
-
-impl<T: Clone> TrustCell<T> {
-    fn inner_clone(&self, from: usize, to: usize) {
-        unsafe { (&mut *self.arr.get())[to] = (&*self.arr.get())[from].clone(); }
-    }
-}
-
 impl<T: ManualCopy<T>> TrustCell<T>  {
     fn inner_manual_copy(&self, from: usize, to: usize) {
         unsafe { (&mut *self.arr.get())[to].copy_from(&(&*self.arr.get())[from]); }
