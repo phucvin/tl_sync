@@ -298,6 +298,8 @@ fn case02() {
     let handle = {
         let mut r = r.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
+            *r.stack[0].title = "Test".into();
+            println!("{:?}", unsafe { &* r.stack[0].title.cell.arr.get() });
             let tmp = &mut r.stack[0].buttons[0];
             *tmp.txt = "Play".into();
             *tmp.pos = (90, 60);
@@ -310,6 +312,7 @@ fn case02() {
     thread::sleep(time::Duration::from_millis(100));
     println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
     handle.join().unwrap();
+    println!("{:?}", unsafe { &* r.stack[0].title.cell.arr.get() });
     println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
 }
 
