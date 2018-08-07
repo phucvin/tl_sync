@@ -20,8 +20,7 @@ unsafe fn thread_index() -> usize {
 }
 
 trait ManualCopy<T> {
-    fn copy_from(&mut self, &ManualCopy<T>);
-    fn get_inner(&self) -> &T;
+    fn copy_from(&mut self, &T);
 }
 
 struct TrustCell<T> {
@@ -120,14 +119,17 @@ impl<T> DerefMut for TlValue<T> {
     }
 }
 
-impl<T: Clone + ManualCopy<T>> TlValue<T> {
+impl<T: Default + Clone + ManualCopy<T>> TlValue<T> {
     fn new(value: T) -> Self {
-        // TODO Flexible array with THREADS
-        let tmp1 = value.clone();
-        // let tmp2 = value.clone();
+        let mut a: [T; THREADS] = Default::default();
+        
+        for i in 1..THREADS {
+            a[i] = value.clone();
+        }
+        a[0] = value;
 
         Self {
-            cell: TrustRc::new(TrustCell::new([value, tmp1])),
+            cell: TrustRc::new(TrustCell::new(a)),
         }
     }
 
@@ -137,14 +139,9 @@ impl<T: Clone + ManualCopy<T>> TlValue<T> {
 }
 
 impl<U: Copy + Default> ManualCopy<Vec<U>> for Vec<U> {
-    fn copy_from(&mut self, other: &ManualCopy<Vec<U>>) {
-        let other = other.get_inner();
+    fn copy_from(&mut self, other: &Vec<U>) {
         self.resize(other.len(), Default::default());
         self.copy_from_slice(other);
-    }
-
-    fn get_inner(&self) -> &Vec<U> {
-        &self
     }
 }
 
