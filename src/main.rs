@@ -54,14 +54,20 @@ impl<T: Clone> TrustCell<T> {
 
 struct TrustRc<T> {
     ptr: *const T,
-    value: Option<T>,
+    org_thread_index: usize,
+}
+
+impl<T> Drop for TrustRc<T> {
+    fn drop(&mut self) {
+        println!("TrustRc::drop");
+    }
 }
 
 impl<T> Clone for TrustRc<T> {
     fn clone(&self) -> Self {
         Self {
             ptr: self.ptr,
-            value: None,
+            org_thread_index: self.org_thread_index,
         }
     }
 }
@@ -76,10 +82,12 @@ impl<T> Deref for TrustRc<T> {
 
 impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
-        Self {
+        let ret = Self {
             ptr: &value as *const T,
-            value: Some(value),
-        }
+            org_thread_index: unsafe { thread_index() },
+        };
+        std::mem::forget(value);
+        ret
     }
 }
 
@@ -266,6 +274,26 @@ fn case03() {
 */
 
 fn main() {
+    {
+        struct A(i32);
+        impl Drop for A {
+            fn drop(&mut self) {
+                println!("dropped!!");
+            }
+        }
+
+        let b;
+        {
+            let tmp = A(10);
+            println!("{:?}", &tmp as *const A);
+            let a = TrustRc::new(tmp);
+            b = a.clone();
+            println!("{:?} {:?}", a.ptr, b.ptr);
+        }
+        println!("{:?}", b.ptr);
+        println!("{}", b.0);
+        println!();
+    }
     //case03();
     case02();
     println!();
