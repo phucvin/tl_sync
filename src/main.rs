@@ -132,10 +132,7 @@ impl<T: Clone + ManualCopy<T>> TlValue<T> {
     }
 
     fn sync(&self, from: usize, to: usize) {
-        //let now = time::Instant::now();
         self.cell.inner_manual_copy(from, to);
-        //let duration = now.elapsed();
-        //println!("sync takes {}s + {}ns", duration.as_secs(), duration.subsec_nanos());
     }
 }
 
@@ -177,7 +174,7 @@ fn case01() {
         // TODO Try par_iter
         b.iter().for_each(|it| it.sync(1, 0));
         let duration = now.elapsed();
-        println!("sync takes {}s + {}ns", duration.as_secs(), duration.subsec_nanos());
+        println!("sync takes {}s + {}us", duration.as_secs(), duration.subsec_micros());
     }
     println!("SYNC");
     println!("main a = {}", a[0]);
@@ -235,7 +232,5 @@ fn case02() {
 */
 
 fn main() {
-    //case02();
-    println!();
     case01();
 }
