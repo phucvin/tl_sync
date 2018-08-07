@@ -59,7 +59,7 @@ struct TrustRc<T> {
     is_org: bool,
 }
 
-unsafe impl<T> Send for TrustRc<T> {}
+impl<T> Send for TrustRc<T> {}
 unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
