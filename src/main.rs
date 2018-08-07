@@ -144,8 +144,12 @@ impl<T: Clone> TlValue<T> {
     }
 }
 
+trail ManualCopy {
+
+}
+
 fn case01() {
-    let a : TlValue<Vec<u8>> = TlValue::new(vec![1; 1024*1024*100]);
+    let a : TlValue<Vec<u8>> = TlValue::new(vec![1; 1024*1024]);
     
     let handle = {
         let mut a = a.clone();
