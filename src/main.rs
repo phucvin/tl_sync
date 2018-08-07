@@ -6,6 +6,18 @@ use std::ops::Deref;
 
 const THREADS: usize = 2;
 
+thread_local! {
+    unsafe static CACHED_THREAD_INDEX: usize = match thread::current().name() {
+        Some("main") => 0,
+        Some(name) => (name.as_bytes()[0] - '0' as u8) as usize,
+        None => panic!("Invalid thread name to get index")
+    };
+}
+
+unsafe fn thread_index() -> usize {
+    CACHED_THREAD_INDEX.with(|c| *c)
+}
+
 struct TrustCell<T> {
     inner: UnsafeCell<[T; THREADS]>,
 }
@@ -19,25 +31,17 @@ impl<T> TrustCell<T> {
         }
     }
 
-    fn get(&self, i: usize) -> &T {
-        unsafe { &(&*self.inner.get())[i] }
+    fn get(&self) -> &T {
+        unsafe { &(&*self.inner.get())[thread_index()] }
     }
 
-    fn get_mut(&self, i: usize) -> &mut T {
-        unsafe { &mut (&mut *self.inner.get())[i] }
+    fn get_mut(&self) -> &mut T {
+        unsafe { &mut (&mut *self.inner.get())[thread_index()] }
     }
-}
 
-thread_local! {
-    static CACHED_THREAD_INDEX: usize = match thread::current().name() {
-        Some("main") => 0,
-        Some(name) => (name.as_bytes()[0] - '0' as u8) as usize,
-        None => panic!("Invalid thread name to get index")
-    };
-}
-
-fn thread_index() -> usize {
-    CACHED_THREAD_INDEX.with(|c| *c)
+    unsafe fn inner_copy(&self, from: usize, to: usize) {
+        *self.get_mut(to) = *self.get(from);
+    }
 }
 
 struct TlValue<T: Copy> {
@@ -48,7 +52,7 @@ impl<T: Copy> Deref for TlValue<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        &self.arr.get(thread_index())
+        &self.arr.get()
     }
 }
 
@@ -60,11 +64,11 @@ impl<T: Copy> TlValue<T> {
     }
 
     fn to_mut(&self) -> &mut T {
-        self.arr.get_mut(thread_index())
+        self.arr.get_mut()
     }
 
-    fn sync(&self, from: usize, to: usize) {
-        *self.arr.get_mut(to) = *self.arr.get(from);
+    unsafe fn sync(&self, from: usize, to: usize) {
+        self.arr.inner_copy(from, to);
     }
 }
 
