@@ -4,6 +4,7 @@ use std::thread;
 use std::cell::UnsafeCell;
 use std::time;
 use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
 
 const THREADS: usize = 2;
 
@@ -222,8 +223,18 @@ fn case02() {
         pos: TlValue<(u32, u32)>,
         txt: TlValue<String>,
     }
-    let mut r = SceneRoot::default();
-    r.stack.push(Scene::default());
+    let r = TlValue::new(ArSceneRoot::default());
+    r.stack.push(Scene {
+        title: TlValue::new("Home".into()),
+        buttons: vec![
+            Button {
+                pos: TlValue::new((100, 50)),
+                txt: TlValue::new("Click Me!".into()),
+            }
+        ],
+    });
+    let tmp = &r.stack[0].buttons[0];
+    println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
 }
 
 fn main() {
