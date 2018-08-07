@@ -20,11 +20,11 @@ impl<T> TrustCell<T> {
     }
 
     fn get(&self, i: usize) -> &T {
-        unsafe { &&*self.inner.get()[i] }
+        unsafe { &(&*self.inner.get())[i] }
     }
 
     fn get_mut(&self, i: usize) -> &mut T {
-        unsafe { &mut &mut *self.inner.get()[i] }
+        unsafe { &mut (&mut *self.inner.get())[i] }
     }
 }
 
@@ -60,7 +60,7 @@ impl<T: Copy> TlValue<T> {
     }
 
     fn to_mut(&self) -> &mut T {
-        &mut self.arr.get_mut(thread_index())
+        self.arr.get_mut(thread_index())
     }
 
     fn sync(&self, from: usize, to: usize) {
