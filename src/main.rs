@@ -64,7 +64,7 @@ impl<T: Copy> TlValue<T> {
     }
 
     fn sync(&self, from: usize, to: usize) {
-        self.arr.get_mut(to) = self.arr.get(from);
+        *self.arr.get_mut(to) = *self.arr.get(from);
     }
 }
 
