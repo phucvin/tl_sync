@@ -178,12 +178,14 @@ impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
     }
 }
 
-impl<U: Copy> ManualCopy<Vec<U>> for Vec<U> {
+impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
         let tmp = unsafe { std::mem::zeroed() };
         self.resize(other.len(), tmp);
-        self.copy_from_slice(other);
+        // TODO use copy_from_slice when possible, for faster (use memcpy)
+        self.clone_from_slice(other);
     }
+
 }
 
 #[allow(dead_code)]
@@ -219,35 +221,51 @@ fn case01() {
     println!("main a = {}", a[0]);
 }
 
+#[allow(dead_code)]
 fn case02() {
     let _a: Tl<usize> = Tl::new(3);
     let _b: Tl<String> = Tl::new("apple".into());
 
     #[derive(Default, Clone)]
     struct SceneRoot {
-        stack: Vec<Scene>,
+        stack: Tl<Vec<Scene>>,
     }
     #[derive(Default, Clone)]
     struct Scene {
         title: Tl<String>,
-        buttons: Vec<Button>,
+        buttons: Tl<Vec<Button>>,
     }
     #[derive(Default, Clone)]
     struct Button {
         pos: Tl<(u32, u32)>,
         txt: Tl<String>,
     }
+    
     let mut r = Tl::new_root(SceneRoot::default());
     r.stack.push(Scene {
         title: Tl::new("Home".into()),
-        buttons: vec![
+        buttons: Tl::new(vec![
             Button {
                 pos: Tl::new((100, 50)),
                 txt: Tl::new("Click Me!".into()),
             }
-        ],
+        ]),
     });
+    
     let tmp = &r.stack[0].buttons[0];
+    println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
+
+    let handle = {
+        let mut r = r.clone();
+        thread::Builder::new().name("1_test".into()).spawn(move || {
+            println!("{}", r.stack.len());
+            let tmp = &mut r.stack[0].buttons[0];
+            *tmp.txt = "Play".into();
+            *tmp.pos = (90, 60);
+        }).unwrap()
+    };
+    handle.join().unwrap();
+
     println!("{}: {} @ {:?}", *r.stack[0].title, *tmp.txt, *tmp.pos);
 }
 
