@@ -132,66 +132,6 @@ impl<T: Copy> TlValue<T> {
     }
 }
 
-/*
-struct TlVec<T: Copy> {
-    arr: TrustCell<[Vec<T>; THREADS]>,
-}
-
-impl<T: Copy> TlVec<T> {
-    fn new(value: Vec<T>) -> Self {
-        // TODO Flexible with THREADS
-        let tmp = value.clone();
-        let tmp = [value, tmp];
-        Self {
-            arr: TrustCell::new(tmp),
-        }
-    }
-
-    fn borrow(&self) -> &Vec<T> {
-        &self.arr.borrow()[thread_index()]
-    }
-
-    fn borrow_mut(&self) -> &mut Vec<T> {
-        &mut self.arr.borrow_mut()[thread_index()]
-    }
-
-    fn sync(&self, from: usize, to: usize) {
-        let arr = self.arr.borrow_mut();
-        // TODO Use current to copy
-        arr[to] = arr[from].clone();
-    }
-}
-
-struct TlMap<T: Clone> {
-    arr: TrustCell<[Vec<T>; THREADS]>,
-}
-
-impl<T: Clone> TlMap<T> {
-    fn new(value: Vec<T>) -> Self {
-        // TODO Flexible with THREADS
-        let tmp = value.clone();
-        let tmp = [value, tmp];
-        Self {
-            arr: TrustCell::new(tmp),
-        }
-    }
-
-    fn borrow(&self) -> &Vec<T> {
-        &self.arr.borrow()[thread_index()]
-    }
-
-    fn borrow_mut(&self) -> &mut Vec<T> {
-        &mut self.arr.borrow_mut()[thread_index()]
-    }
-
-    fn sync(&self, from: usize, to: usize) {
-        let arr = self.arr.borrow_mut();
-        // TODO Use current to copy
-        arr[to] = arr[from].clone();
-    }
-}
-*/
-
 fn case01() {
     let a = TlValue::new(1);
     
@@ -262,28 +202,6 @@ fn case02() {
     let table  = &h.table;
     println!("{:?} {:?}", table.progress, table.result);
 }
-
-/*
-fn case03() {
-    let _1 = TlVec::new(vec![0, 1]);
-    let _2 = TlMap::new(vec![TlValue::new("a"), TlValue::new("b")]);
-    
-    #[derive(Clone)]
-    struct Home<'a> {
-        progress: TlValue<f32>,
-        result: TlValue<Option<&'a str>>,
-        tmp: Arc<Vec<i32>>,
-    }
-
-    let _3 = TlMap::new(vec![
-        Home {
-            progress: TlValue::new(0.),
-            result: TlValue::new(None),
-            tmp: Arc::new(vec![]),
-        },
-    ]);
-}
-*/
 
 fn main() {
     {
