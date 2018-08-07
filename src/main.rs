@@ -132,10 +132,10 @@ impl<T: Clone + ManualCopy<T>> TlValue<T> {
     }
 
     fn sync(&self, from: usize, to: usize) {
-        let now = time::Instant::now();
+        //let now = time::Instant::now();
         self.cell.inner_manual_copy(from, to);
-        let duration = now.elapsed();
-        println!("sync_clone takes {}s + {}ns", duration.as_secs(), duration.subsec_nanos());
+        //let duration = now.elapsed();
+        //println!("sync_clone takes {}s + {}ns", duration.as_secs(), duration.subsec_nanos());
     }
 }
 
@@ -152,7 +152,8 @@ impl<U: Copy + Default> ManualCopy<Vec<U>> for Vec<U> {
 }
 
 fn case01() {
-    let a : TlValue<Vec<u8>> = TlValue::new(vec![1; 1024*1024*100]);
+    let a: TlValue<Vec<u8>> = TlValue::new(vec![1; 1024*1024*200]);
+    let b: TlValue<Vec<u8>> = TlValue::new(vec![1; 1024*1024*200]);
     
     let handle = {
         let mut a = a.clone();
@@ -170,7 +171,19 @@ fn case01() {
     println!("Done heavy in main");
     handle.join().unwrap();
     
-    a.sync(1, 0);
+    {
+        let now = time::Instant::now();
+
+        //let b = b.clone();
+        //let handle = thread::spawn(move || { b.sync(1, 0); });
+        
+        a.sync(1, 0);
+        //handle.join().unwrap();
+        b.sync(1, 0);
+        
+        let duration = now.elapsed();
+        println!("total takes {}s + {}ns", duration.as_secs(), duration.subsec_nanos());
+    }
     println!("SYNC");
     println!("main a = {}", a[0]);
 }
