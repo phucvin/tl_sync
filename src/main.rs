@@ -1,3 +1,5 @@
+#![feature(box_into_raw_non_null)]
+
 use std::thread;
 use std::sync::Arc;
 use std::cell::UnsafeCell;
@@ -59,7 +61,6 @@ struct TrustRc<T> {
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
-        println!("TrustRc::drop");
     }
 }
 
@@ -83,10 +84,9 @@ impl<T> Deref for TrustRc<T> {
 impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
         let ret = Self {
-            ptr: &value as *const T,
+            ptr: Box::into_raw_non_null(Box::new(value)).as_ptr(),
             org_thread_index: unsafe { thread_index() },
         };
-        std::mem::forget(value);
         ret
     }
 }
@@ -284,14 +284,11 @@ fn main() {
 
         let b;
         {
-            let tmp = A(10);
-            println!("{:?}", &tmp as *const A);
-            let a = TrustRc::new(tmp);
+            let a = TrustRc::new(std::cell::RefCell::new(A(10)));
             b = a.clone();
-            println!("{:?} {:?}", a.ptr, b.ptr);
+            a.borrow_mut().0 = 12;
         }
-        println!("{:?}", b.ptr);
-        println!("{}", b.0);
+        println!("{}", b.borrow().0);
         println!();
     }
     //case03();
