@@ -3,7 +3,7 @@
 use std::thread;
 use std::cell::UnsafeCell;
 use std::time;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 const THREADS: usize = 2;
 
@@ -112,7 +112,13 @@ impl<T: Copy> Deref for TlValue<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        &self.cell.get()
+        self.cell.get()
+    }
+}
+
+impl<T: Copy> DerefMut for TlValue<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.cell.get_mut()
     }
 }
 
@@ -121,10 +127,6 @@ impl<T: Copy> TlValue<T> {
         Self {
             cell: TrustRc::new(TrustCell::new([value; THREADS])),
         }
-    }
-
-    fn to_mut(&self) -> &mut T {
-        self.cell.get_mut()
     }
 
     fn sync(&self, from: usize, to: usize) {
@@ -136,12 +138,12 @@ fn case01() {
     let a = TlValue::new(1);
     
     let handle = {
-        let a = a.clone();
+        let mut a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test a = {}", *a);
             thread::sleep(time::Duration::from_millis(20));
             println!("Done heavy in test");
-            *a.to_mut() = 2;
+            *a = 2;
             println!("test a = {}", *a);
         }).unwrap()
     };
@@ -185,11 +187,11 @@ fn case02() {
     };
 
     let handle = {
-        let h = h.clone();
+        let mut h = h.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            *h.progress.to_mut() = 1.;
-            *h.result.to_mut() = Some("Big Result");
-            let table = h.table.to_mut();
+            *h.progress = 1.;
+            *h.result = Some("Big Result");
+            let mut table = h.table;
             table.progress = 0.49;
             table.result = "Almost halfway";
         }).unwrap()
@@ -199,8 +201,7 @@ fn case02() {
     h.sync(1, 0);
 
     println!("{:?} {:?}", *h.progress, *h.result);
-    let table  = &h.table;
-    println!("{:?} {:?}", table.progress, table.result);
+    println!("{:?} {:?}", (*h.table).progress, (*h.table).result);
 }
 
 fn main() {
