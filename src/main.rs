@@ -20,11 +20,11 @@ impl<T> TrustCell<T> {
     }
 
     fn get(&self, i: usize) -> &T {
-        unsafe { &*self.inner.get()[i] }
+        unsafe { &&*self.inner.get()[i] }
     }
 
     fn get_mut(&self, i: usize) -> &mut T {
-        unsafe { &mut *self.inner.get()[i] }
+        unsafe { &mut &mut *self.inner.get()[i] }
     }
 }
 
