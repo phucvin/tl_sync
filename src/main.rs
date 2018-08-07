@@ -204,33 +204,6 @@ fn case02() {
 }
 
 fn main() {
-    {
-        let b;
-        {
-            let a = TrustRc::new(std::cell::RefCell::new(10));
-            b = a.clone();
-            *a.borrow_mut() = 12;
-        }
-        println!("{}", b.borrow());
-        println!();
-    }
-    {
-        let a = TrustRc::new(std::cell::RefCell::new(11));
-        let handle = {
-            let a = a.clone();
-            thread::spawn(move || {
-                thread::sleep(time::Duration::from_millis(10));
-                println!("thread {}", a.borrow());
-                *a.borrow_mut() = 13;
-                println!("thread {}", a.borrow());
-            })
-        };
-        println!("main {}", a.borrow());
-        //std::mem::drop(a); println!("main drop");
-        handle.join().unwrap();
-        println!();
-    }
-    //case03();
     case02();
     println!();
     case01();
