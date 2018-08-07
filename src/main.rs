@@ -130,27 +130,29 @@ impl<T: Clone> TlMap<T> {
 */
 
 fn case01() {
-    let a = Arc::new(TlValue::new(1));
+    struct A(TlValue<i32>);
+
+    let a = Arc::new(A(TlValue::new(1)));
     
     let handle = {
         let a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            println!("test a = {}", **a);
+            println!("test a = {}", *a.0);
             thread::sleep(time::Duration::from_millis(20));
             println!("Done heavy in test");
-            *a.to_mut() = 2;
-            println!("test a = {}", **a);
+            *a.0.to_mut() = 2;
+            println!("test a = {}", *a.0);
         }).unwrap()
     };
 
     thread::sleep(time::Duration::from_millis(100));
-    println!("main a = {}", **a);
+    println!("main a = {}", *a.0);
     println!("Done heavy in main");
     handle.join().unwrap();
     
-    a.sync(1, 0);
+    a.0.sync(1, 0);
     println!("SYNC");
-    println!("main a = {}", **a);
+    println!("main a = {}", *a.0);
 }
 
 fn case02() {
