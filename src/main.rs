@@ -4,29 +4,29 @@ use std::cell::UnsafeCell;
 use std::time;
 use std::ops::Deref;
 
+const THREADS: usize = 2;
+
 struct TrustCell<T> {
-    inner: UnsafeCell<T>,
+    inner: UnsafeCell<[T; THREADS]>,
 }
 
 unsafe impl<T> Sync for TrustCell<T> {}
 
 impl<T> TrustCell<T> {
-    fn new(value: T) -> Self {
+    fn new(arr: [T; THREADS]) -> Self {
         Self {
-            inner: UnsafeCell::new(value),
+            inner: UnsafeCell::new(arr),
         }
     }
 
-    fn get(&self) -> &T {
-        unsafe { &*self.inner.get() }
+    fn get(&self, i: usize) -> &T {
+        unsafe { &*self.inner.get()[i] }
     }
 
-    fn get_mut(&self) -> &mut T {
-        unsafe { &mut *self.inner.get() }
+    fn get_mut(&self, i: usize) -> &mut T {
+        unsafe { &mut *self.inner.get()[i] }
     }
 }
-
-const THREADS: usize = 2;
 
 thread_local! {
     static CACHED_THREAD_INDEX: usize = match thread::current().name() {
@@ -41,14 +41,14 @@ fn thread_index() -> usize {
 }
 
 struct TlValue<T: Copy> {
-    arr: TrustCell<[T; THREADS]>,
+    arr: TrustCell<T>,
 }
 
 impl<T: Copy> Deref for TlValue<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        &self.arr.get()[thread_index()]
+        &self.arr.get(thread_index())
     }
 }
 
@@ -60,12 +60,11 @@ impl<T: Copy> TlValue<T> {
     }
 
     fn to_mut(&self) -> &mut T {
-        &mut self.arr.get_mut()[thread_index()]
+        &mut self.arr.get_mut(thread_index())
     }
 
     fn sync(&self, from: usize, to: usize) {
-        let arr = self.arr.get_mut();
-        arr[to] = arr[from];
+        self.arr.get_mut(to) = self.arr.get(from);
     }
 }
 
