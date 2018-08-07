@@ -93,6 +93,10 @@ impl<T> TrustRc<T> {
     }
 }
 
+trait Dirty {
+    fn sync(&self, from: usize, to: usize);
+}
+
 struct Tl<T> {
     cell: TrustRc<TrustCell<T>>,
 }
@@ -113,7 +117,7 @@ impl<T> Deref for Tl<T> {
     }
 }
 
-impl<T> DerefMut for Tl<T> {
+impl<T: ManualCopy<T>> DerefMut for Tl<T> {
     fn deref_mut(&mut self) -> &mut T {
         self.cell.get_mut()
     }
@@ -125,7 +129,7 @@ impl<T: Default + Clone + ManualCopy<T>> Default for Tl<T> {
     }
 }
 
-impl<T: Clone + ManualCopy<T>> Tl<T> {
+impl<T: Clone> Tl<T> {
     fn new(value: T) -> Self {
         let mut a: [T; THREADS] = unsafe { std::mem::zeroed() };
         
@@ -138,24 +142,11 @@ impl<T: Clone + ManualCopy<T>> Tl<T> {
             cell: TrustRc::new(TrustCell::new(a)),
         }
     }
-
-    fn sync(&self, from: usize, to: usize) {
-        self.cell.inner_manual_copy(from, to);
-    }
 }
 
-impl<T: Clone> Tl<T> {
-    fn new_root(value: T) -> Self {
-        let mut a: [T; THREADS] = unsafe { std::mem::zeroed() };
-        
-        for i in 1..THREADS {
-            a[i] = value.clone();
-        }
-        a[0] = value;
-
-        Self {
-            cell: TrustRc::new(TrustCell::new(a)),
-        }
+impl<T: ManualCopy<T>> Dirty for Tl<T> {
+    fn sync(&self, from: usize, to: usize) {
+        self.cell.inner_manual_copy(from, to);
     }
 }
 
@@ -169,6 +160,15 @@ impl ManualCopy<String> for String {
     fn copy_from(&mut self, other: &String) {
         self.clear();
         self.push_str(other);
+    }
+}
+
+impl<T: Clone> ManualCopy<Option<T>> for Option<T> {
+    fn copy_from(&mut self, other: &Option<T>) {
+        *self = match *other {
+            None => None,
+            Some(ref v) => Some(v.clone()),
+        }
     }
 }
 
@@ -226,9 +226,23 @@ fn case02() {
     let _a: Tl<usize> = Tl::new(3);
     let _b: Tl<String> = Tl::new("apple".into());
 
-    #[derive(Default, Clone)]
+    #[derive(Clone)]
     struct SceneRoot {
         stack: Tl<Vec<Scene>>,
+        unique_scene: Tl<Option<Scene>>,
+    }
+    impl Default for SceneRoot {
+        fn default() -> Self {
+            Self {
+                stack: Default::default(),
+                unique_scene: Tl::new(None),
+            }
+        }
+    }
+    impl ManualCopy<SceneRoot> for SceneRoot {
+        fn copy_from(&mut self, _other: &SceneRoot) {
+            // Do nothing on purpose
+        }
     }
     #[derive(Default, Clone)]
     struct Scene {
@@ -241,7 +255,7 @@ fn case02() {
         txt: Tl<String>,
     }
     
-    let mut r = Tl::new_root(SceneRoot::default());
+    let mut r = Tl::new(SceneRoot::default());
     r.stack.push(Scene {
         title: Tl::new("Home".into()),
         buttons: Tl::new(vec![
