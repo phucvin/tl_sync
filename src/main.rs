@@ -77,8 +77,10 @@ impl<T> Drop for TrustRc<T> {
         } else if counter == 1 {
             self.counter.set(counter - 1);
 
-            unsafe { std::ptr::drop_in_place(self.ptr); }
-            unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
+            unsafe {
+                std::ptr::drop_in_place(self.ptr);
+                std::ptr::write(self.ptr, std::mem::zeroed());
+            }
             println!("\t\tDROP");
         }
     }
@@ -367,7 +369,8 @@ fn case02() {
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test pre {:?}", unsafe { &*c.cell.arr.get() });
             c.inner.to_mut().push(Wrapper { value: Tl::new(33), });
-            Tl::new(100); // LEAK HERE
+            Tl::new(100);
+            println!("\t\t  LEAK HERE", );
             println!("test change {:?}", unsafe { &*c.cell.arr.get() });
             sync_from(2);
             sync_to(0);
