@@ -321,6 +321,6 @@ fn case02() {
 
 fn main() {
     case01();
-    println!("");
+    println!();
     case02();
 }
