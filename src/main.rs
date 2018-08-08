@@ -67,7 +67,7 @@ unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
-        println!("\t\t\tdrop called at thread {}", thread_index());
+        // println!("\t\t\tdrop called at thread {}", thread_index());
         let current_thread = thread_index();
         if current_thread != 0 { return; }
 
@@ -78,13 +78,13 @@ impl<T> Drop for TrustRc<T> {
         } else if counter == 1 {
             self.counter.set(counter - 1);
 
+            println!("\t\tDROP {:?}", self.ptr);
             unsafe {
                 std::ptr::drop_in_place(self.ptr);
                 std::ptr::write(self.ptr, std::mem::zeroed());
             }
-            println!("\t\tDROP");
         } else {
-            println!("\t\tZERO DROP");
+            // println!("\t\tZERO DROP");
         }
     }
 }
@@ -123,7 +123,7 @@ impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
         let ptr = Box::into_raw_non_null(Box::new(value)).as_ptr();
 
-        println!("\t\tNEW");
+        println!("\t\tNEW {:?}", ptr);
         Self {
             ptr,
             counter: Rc::new(Cell::new(1)),
