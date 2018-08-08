@@ -164,6 +164,7 @@ fn sync_to(to: usize) {
         let from = unsafe{ thread_index() };
         let mut d = d.borrow_mut();
 
+        // println!("SYNC {} -> {} : {}", from, to, d.len());
         d.iter().for_each(|it| it.sync(from, to));
         d.clear();
     });
