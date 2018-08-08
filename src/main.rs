@@ -57,6 +57,10 @@ impl<T> TrustCell<T> {
     fn to_mut(&self) -> &mut T {
         unsafe { &mut (&mut *self.arr.get())[THREADS - 1] }
     }
+
+    unsafe fn to_mut_same_thread(&self) -> &mut T {
+        &mut (&mut *self.arr.get())[thread_index()]
+    }
 }
 
 impl<T: ManualCopy<T>> TrustCell<T>  {
@@ -92,6 +96,13 @@ impl<T> Deref for Tl<T> {
 }
 
 static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
+
+fn init_dirties() {
+    unsafe {
+        DIRTIES = Some(TrustCell::new(Default::default()));
+    }    
+}
+
 fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
     unsafe {
         match DIRTIES {
@@ -107,7 +118,8 @@ fn sync_to(to: usize) {
 
     println!("SYNC {} -> {} : {}", from, to, d.len());
     d.iter().for_each(|it| it.1.sync(from, to));
-    d.to_mut().clear();
+    let d = unsafe { d.to_mut_same_thread() };
+    d.clear();
 }
 
 fn sync_from(from: usize) {
@@ -115,7 +127,8 @@ fn sync_from(from: usize) {
     let to = thread_index();
 
     println!("SYNC {} <- {} : {}", to, from, d.len());
-    d.to_mut().iter_mut().for_each(|it| {
+    let d = unsafe { d.to_mut_same_thread() };
+    d.iter_mut().for_each(|it| {
         it.0 = 1;
         it.1.sync(from, to);
     });
@@ -125,6 +138,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
     fn to_mut(&self) -> &mut T {
         // TODO Dev check if caller come from different places
         // even in different sync calls, then should panic
+        
         {
             let d = get_dirties();
             let tmp = Box::new(self.clone());
@@ -142,7 +156,8 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
             }
 
             if is_unique {
-                d.to_mut().push((2, tmp));
+                let d = unsafe { d.to_mut_same_thread() };
+                d.push((2, tmp));
             }
         }
 
@@ -415,6 +430,8 @@ fn case04() {
 }
 
 fn main() {
+    init_dirties();
+
     // case01();
     // println!();
     case02();
