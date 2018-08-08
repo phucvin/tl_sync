@@ -61,11 +61,13 @@ unsafe impl<T> Send for TrustRc<T> {}
 unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
-    fn drop(&mut self) {/*
+    fn drop(&mut self) {
         if !self.is_org { return; }
+        if unsafe { thread_index() } != 0 { return; }
+        println!("drop");
         unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
         unsafe { std::ptr::drop_in_place(self.ptr); }
-    */}
+    }
 }
 
 impl<T> Clone for TrustRc<T> {
@@ -204,6 +206,7 @@ impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
         let tmp = unsafe { std::mem::zeroed() };
         self.resize(other.len(), tmp);
+        println!("vec manual copy");
         // TODO use copy_from_slice when possible, for faster (use memcpy)
         self.clone_from_slice(other);
     }
@@ -246,7 +249,7 @@ fn case01() {
 fn case02() {
     let _a: Tl<usize> = Tl::new(3);
     let _b: Tl<String> = Tl::new("apple".into());
-    
+
     #[derive(Clone, Default)]
     struct Holder {
         inner: Tl<Vec<Wrapper>>,
