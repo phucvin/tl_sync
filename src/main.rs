@@ -157,7 +157,7 @@ impl<T> Deref for Tl<T> {
 }
 
 thread_local! {
-    static DIRTIES: RefCell<Vec<Box<Dirty>>> = RefCell::new(vec![]);
+    static DIRTIES: RefCell<Vec<(u8, Box<Dirty>)>> = RefCell::new(vec![]);
 }
 
 fn sync_to(to: usize) {
@@ -166,7 +166,7 @@ fn sync_to(to: usize) {
         let mut d = d.borrow_mut();
 
         println!("SYNC {} -> {} : {}", from, to, d.len());
-        d.iter().for_each(|it| it.sync(from, to));
+        d.iter().for_each(|it| it.1.sync(from, to));
         d.clear();
     });
 }
@@ -174,10 +174,13 @@ fn sync_to(to: usize) {
 fn sync_from(from: usize) {
     DIRTIES.with(|d| {
         let to = unsafe{ thread_index() };
-        let d = d.borrow_mut();
+        let mut d = d.borrow_mut();
 
         println!("SYNC {} <- {} : {}", to, from, d.len());
-        d.iter().for_each(|it| it.sync(from, to));
+        d.iter_mut().for_each(|it| {
+            it.0 = 1;
+            it.1.sync(from, to);
+        });
     });
 }
 
@@ -191,14 +194,15 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
                 let ptr = tmp.cell.ptr;
 
                 for it in d.borrow().iter() {
-                    if it.is_same_pointer(ptr as usize) {
+                    if it.1.is_same_pointer(ptr as usize) {
+                        if it.0 > 1 {
+                            panic!("Only allow one mutation each sync");
+                        }
                         return;
-                        // TODO Panic if can check correctly (use multiple dirty map)
-                        // panic!("Only allow one mutation each sync");
                     }
                 }
 
-                d.borrow_mut().push(tmp);
+                d.borrow_mut().push((2, tmp));
             });
         }
 
