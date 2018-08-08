@@ -10,7 +10,7 @@ use std::fmt::{self, Debug};
 use std::rc::Rc;
 use rayon::prelude::*;
 
-const THREADS: usize = 2;
+const THREADS: usize = 3;
 
 thread_local! {
     static CACHED_THREAD_INDEX: usize = match thread::current().name() {
@@ -47,7 +47,7 @@ impl<T> TrustCell<T> {
     }
 
     fn get_mut(&self) -> &mut T {
-        unsafe { &mut (&mut *self.arr.get())[thread_index()] }
+        unsafe { &mut (&mut *self.arr.get())[THREADS - 1] }
     }
 }
 
@@ -170,6 +170,16 @@ fn sync_to(to: usize) {
     });
 }
 
+fn sync_from(from: usize) {
+    DIRTIES.with(|d| {
+        let to = unsafe{ thread_index() };
+        let d = d.borrow_mut();
+
+        // println!("SYNC {} <- {} : {}", from, to, d.len());
+        d.iter().for_each(|it| it.sync(from, to));
+    });
+}
+
 impl<T: 'static + ManualCopy<T>> Tl<T> {
     fn to_mut(&self) -> &mut T {
         {
@@ -199,8 +209,9 @@ impl<T: Clone> Tl<T> {
     fn new(value: T) -> Self {
         // TODO Find a way that flexible with thread,
         // but also not using std::mem::zeroed (error with Rc)
-        let tmp = value.clone();
-        let a = [value, tmp];
+        let tmp1 = value.clone();
+        let tmp2 = value.clone();
+        let a = [value, tmp1, tmp2];
 
         Self {
             cell: TrustRc::new(TrustCell::new(a)),
@@ -263,7 +274,7 @@ fn case01() {
     for _i in 1..100 {
         b.push(Tl::new(vec![1; 1024*100]));
     }
-    
+
     let handle = {
         let a = a.clone_to_thread();
         thread::Builder::new().name("1_test".into()).spawn(move || {
@@ -271,6 +282,7 @@ fn case01() {
             thread::sleep(time::Duration::from_millis(5));
             println!("Done heavy in test");
             a.to_mut()[0] = 2;
+            a.sync(2, 1);
             println!("test a = {}", a[0]);
         }).unwrap()
     };
@@ -287,7 +299,6 @@ fn case01() {
         let duration = now.elapsed();
         println!("sync takes {}s + {}ms", duration.as_secs(), duration.subsec_millis());
     }
-    println!("SYNC");
     println!("main a = {}", a[0]);
 }
 
@@ -328,6 +339,7 @@ fn case02() {
             println!("test pre {:?}", unsafe { &*c.cell.arr.get() });
             c.inner.to_mut().push(Wrapper { value: Tl::new(33), });
             println!("test change {:?}", unsafe { &*c.cell.arr.get() });
+            sync_from(2);
             sync_to(0);
             println!("test post {:?}", unsafe { &*c.cell.arr.get() });
         }).unwrap()
@@ -380,14 +392,14 @@ fn case03() {
             }
         ]),
     });
-    
+
+    sync_from(2);
+    sync_to(1);
     println!("{}: {} @ {:?}",
         *r.stack[0].title,
         *r.stack[0].buttons[0].txt,
         *r.stack[0].buttons[0].pos
     );
-
-    sync_to(1);
 
     let handle = {
         let r = r.clone_to_thread();
@@ -399,6 +411,7 @@ fn case03() {
             }
 
             thread::sleep(time::Duration::from_millis(10));
+            sync_from(2);
             sync_to(0);
         }).unwrap()
     };
