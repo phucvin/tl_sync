@@ -106,6 +106,12 @@ impl<T> Deref for TrustRc<T> {
     }
 }
 
+impl<T: Default> Default for TrustRc<T> {
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
 impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
         let ptr = Box::into_raw_non_null(Box::new(value)).as_ptr();
@@ -395,6 +401,7 @@ fn case03() {
     struct Scene {
         title: Tl<String>,
         buttons: Tl<Vec<Button>>,
+        image_data: TrustRc<Vec<u8>>,
     }
     #[derive(Default, Clone)]
     struct Button {
@@ -411,6 +418,7 @@ fn case03() {
                 txt: Tl::new("Click Me!".into()),
             }
         ]),
+        image_data: TrustRc::new(vec![8; 1024]),
     });
 
     sync_from(2);
