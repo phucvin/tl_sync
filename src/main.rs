@@ -394,6 +394,7 @@ fn case03() {
     );
 }
 
+#[allow(dead_code)]
 fn case04() {
     let tmp = Tl::new(1);
     let a = Tl::new((true, tmp));
