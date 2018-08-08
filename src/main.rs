@@ -3,7 +3,7 @@
 extern crate rayon;
 
 use std::thread;
-use std::cell::{UnsafeCell, RefCell, Cell};
+use std::cell::{UnsafeCell, RefCell};
 use std::time;
 use std::ops::Deref;
 use std::fmt::{self, Debug};
@@ -18,7 +18,6 @@ thread_local! {
         Some(name) => 1 + (name.as_bytes()[0] - '1' as u8) as usize,
         None => panic!("Invalid thread name to get index")
     };
-    static IS_CLONING_FOR_THREAD: Cell<bool> = Cell::new(false);
 }
 
 fn thread_index() -> usize {
@@ -72,20 +71,6 @@ impl<T> Clone for Tl<T> {
         Self {
             cell: self.cell.clone(),
         }
-    }
-}
-
-impl<T> Tl<T> {
-    fn clone_to_thread(&self) -> Self {
-        IS_CLONING_FOR_THREAD.with(|b| {
-            let ret;
-            
-            b.set(true);
-            ret = self.clone();
-            b.set(false);
-
-            ret
-        })
     }
 }
 
@@ -239,7 +224,7 @@ fn case01() {
     }
 
     let handle = {
-        let a = a.clone_to_thread();
+        let a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test a = {}", a[0]);
             thread::sleep(time::Duration::from_millis(5));
@@ -297,7 +282,7 @@ fn case02() {
     println!("main pre {:?}", unsafe { &*c.cell.arr.get() });
     
     let handle = {
-        let mut c = c.clone_to_thread();
+        let mut c = c.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test pre {:?}", unsafe { &*c.cell.arr.get() });
             c.inner.to_mut().push(Wrapper { value: Tl::new(33), });
@@ -369,7 +354,7 @@ fn case03() {
     );
 
     let handle = {
-        let r = r.clone_to_thread();
+        let r = r.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             for _ in 1..10 {
                 {
@@ -401,7 +386,7 @@ fn case04() {
     let a = Tl::new((true, tmp));
     println!("{}", *a.1);
     {
-        let a = a.clone_to_thread();
+        let a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             *(*a).1.to_mut() = 3;
             // a.to_mut().1 = Tl::new(3);
