@@ -276,25 +276,29 @@ fn case02() {
         }
     }
 
-    let c: Tl<Holder> = Default::default();
+    let c: Arc<Holder> = Arc::new(Default::default());
     c.inner.to_mut().push(Wrapper { value: Tl::new(22), });
+    sync_from(2);
     sync_to(1);
-    println!("main pre {:?}", unsafe { &*c.cell.arr.get() });
+    println!("main pre {:?}", c);
     
     let handle = {
         let mut c = c.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            println!("test pre {:?}", unsafe { &*c.cell.arr.get() });
+            println!("test pre {:?}", c);
+            let tmp = c.inner[0].value.to_mut();
+            *tmp = 100;
             c.inner.to_mut().push(Wrapper { value: Tl::new(33), });
-            println!("test change {:?}", unsafe { &*c.cell.arr.get() });
+            println!("test change {:?}", c);
             sync_from(2);
             sync_to(0);
-            println!("test post {:?}", unsafe { &*c.cell.arr.get() });
+            println!("test post {:?}", c);
         }).unwrap()
     };
 
     handle.join().unwrap();
-    println!("main post {:?}", unsafe { &*c.cell.arr.get() });
+    println!("main post {:?}", c);
+    println!("{:?}", *c.inner);
 }
 
 #[allow(dead_code)]
@@ -331,7 +335,7 @@ fn case03() {
         txt: Tl<String>,
     }
     
-    let r = Tl::new(SceneRoot::default());
+    let r = Arc::new(SceneRoot::default());
     r.stack.to_mut().push(Scene {
         title: Tl::new("Home".into()),
         buttons: Tl::new(vec![
@@ -399,9 +403,9 @@ fn case04() {
 fn main() {
     // case01();
     // println!();
-    // case02();
+    case02();
     // println!();
     // case03();
     // println!();
-    case04();
+    // case04();
 }
