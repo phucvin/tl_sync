@@ -478,7 +478,6 @@ fn case04() {
         thread::Builder::new().name("1_test".into()).spawn(move || {
             // *(*a).1.to_mut() = 3;
             a.to_mut().1 = Tl::new(3);
-            println!("--");
             sync_from(2);
             sync_to(0);
         }).unwrap().join().unwrap();
