@@ -3,13 +3,13 @@
 
 extern crate rayon;
 
-use std::thread;
-use std::cell::UnsafeCell;
-use std::time;
-use std::ops::Deref;
-use std::fmt::{self, Debug};
-use std::sync::Arc;
 use rayon::prelude::*;
+use std::cell::UnsafeCell;
+use std::fmt::{self, Debug};
+use std::ops::Deref;
+use std::sync::Arc;
+use std::thread;
+use std::time;
 
 const THREADS: usize = 3;
 
@@ -63,9 +63,11 @@ impl<T> TrustCell<T> {
     }
 }
 
-impl<T: ManualCopy<T>> TrustCell<T>  {
+impl<T: ManualCopy<T>> TrustCell<T> {
     fn inner_manual_copy(&self, from: usize, to: usize) {
-        unsafe { (&mut *self.arr.get())[to].copy_from(&(&*self.arr.get())[from]); }
+        unsafe {
+            (&mut *self.arr.get())[to].copy_from(&(&*self.arr.get())[from]);
+        }
     }
 }
 
@@ -100,7 +102,7 @@ static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
 fn init_dirties() {
     unsafe {
         DIRTIES = Some(TrustCell::new(Default::default()));
-    }    
+    }
 }
 
 fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
@@ -138,7 +140,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
     fn to_mut(&self) -> &mut T {
         // TODO Dev check if caller come from different places
         // even in different sync calls, then should panic
-        
+
         {
             let d = get_dirties();
             let tmp = Box::new(self.clone());
@@ -229,7 +231,7 @@ impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
         // TODO If U: Copy, try to use memcpy (copy_from_slice)
         let slen = self.len();
         let olen = other.len();
-        
+
         if slen < olen {
             for i in slen..olen {
                 self.push(other[i].clone());
@@ -246,35 +248,41 @@ impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
 
 #[allow(dead_code)]
 fn case01() {
-    let a: Tl<Vec<u8>> = Tl::new(vec![1; 1024*1024]);
+    let a: Tl<Vec<u8>> = Tl::new(vec![1; 1024 * 1024]);
     let mut b: Vec<Tl<Vec<u8>>> = vec![];
     for _i in 1..100 {
-        b.push(Tl::new(vec![1; 1024*100]));
+        b.push(Tl::new(vec![1; 1024 * 100]));
     }
 
     let handle = {
         let a = a.clone();
-        thread::Builder::new().name("1_test".into()).spawn(move || {
-            println!("test a = {}", a[0]);
-            thread::sleep(time::Duration::from_millis(5));
-            println!("Done heavy in test");
-            a.to_mut()[0] = 2;
-            a.sync(2, 1);
-            println!("test a = {}", a[0]);
-        }).unwrap()
+        thread::Builder::new()
+            .name("1_test".into())
+            .spawn(move || {
+                println!("test a = {}", a[0]);
+                thread::sleep(time::Duration::from_millis(5));
+                println!("Done heavy in test");
+                a.to_mut()[0] = 2;
+                a.sync(2, 1);
+                println!("test a = {}", a[0]);
+            }).unwrap()
     };
 
     thread::sleep(time::Duration::from_millis(10));
     println!("main a = {}", a[0]);
     println!("Done heavy in main");
     handle.join().unwrap();
-    
+
     {
         let now = time::Instant::now();
         a.sync(1, 0);
         b.par_iter().for_each(|it| it.sync(1, 0));
         let duration = now.elapsed();
-        println!("sync takes {}s + {}ms", duration.as_secs(), duration.subsec_millis());
+        println!(
+            "sync takes {}s + {}ms",
+            duration.as_secs(),
+            duration.subsec_millis()
+        );
     }
     println!("main a = {}", a[0]);
 }
@@ -292,7 +300,9 @@ fn case02() {
     }
     impl Debug for Holder {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "Holder {{ inner: {:?} }}", unsafe { &*self.inner.cell.arr.get() })
+            write!(f, "Holder {{ inner: {:?} }}", unsafe {
+                &*self.inner.cell.arr.get()
+            })
         }
     }
     #[derive(Clone, Default)]
@@ -301,28 +311,32 @@ fn case02() {
     }
     impl Debug for Wrapper {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "Wrapper {{ value: {:?} }}", unsafe { &*self.value.cell.arr.get() })
+            write!(f, "Wrapper {{ value: {:?} }}", unsafe {
+                &*self.value.cell.arr.get()
+            })
         }
     }
 
     let c: Arc<Holder> = Arc::new(Default::default());
-    c.inner.to_mut().push(Wrapper { value: Tl::new(22), });
+    c.inner.to_mut().push(Wrapper { value: Tl::new(22) });
     sync_from(2);
     sync_to(1);
     println!("main pre {:?}", c);
-    
+
     let handle = {
         let mut c = c.clone();
-        thread::Builder::new().name("1_test".into()).spawn(move || {
-            println!("test pre {:?}", c);
-            let tmp = c.inner[0].value.to_mut();
-            *tmp = 100;
-            c.inner.to_mut().push(Wrapper { value: Tl::new(33), });
-            println!("test change {:?}", c);
-            sync_from(2);
-            sync_to(0);
-            println!("test post {:?}", c);
-        }).unwrap()
+        thread::Builder::new()
+            .name("1_test".into())
+            .spawn(move || {
+                println!("test pre {:?}", c);
+                let tmp = c.inner[0].value.to_mut();
+                *tmp = 100;
+                c.inner.to_mut().push(Wrapper { value: Tl::new(33) });
+                println!("test change {:?}", c);
+                sync_from(2);
+                sync_to(0);
+                println!("test post {:?}", c);
+            }).unwrap()
     };
 
     handle.join().unwrap();
@@ -363,51 +377,49 @@ fn case03() {
         pos: Tl<(u32, u32)>,
         txt: Tl<String>,
     }
-    
+
     let r = Arc::new(SceneRoot::default());
     r.stack.to_mut().push(Scene {
         title: Tl::new("Home".into()),
-        buttons: Tl::new(vec![
-            Button {
-                pos: Tl::new((100, 50)),
-                txt: Tl::new("Click Me!".into()),
-            }
-        ]),
+        buttons: Tl::new(vec![Button {
+            pos: Tl::new((100, 50)),
+            txt: Tl::new("Click Me!".into()),
+        }]),
         image_data: Arc::new(vec![8; 1024]),
     });
 
     sync_from(2);
     sync_to(1);
-    println!("{}: {} @ {:?}",
-        *r.stack[0].title,
-        *r.stack[0].buttons[0].txt,
-        *r.stack[0].buttons[0].pos
+    println!(
+        "{}: {} @ {:?}",
+        *r.stack[0].title, *r.stack[0].buttons[0].txt, *r.stack[0].buttons[0].pos
     );
 
     let handle = {
         let r = r.clone();
-        thread::Builder::new().name("1_test".into()).spawn(move || {
-            for _ in 1..10 {
-                {
-                    let tmp = &r.stack[0].buttons[0];
-                    *tmp.txt.to_mut() = "Play".into();
-                    *tmp.pos.to_mut() = (tmp.pos.0 - 2, tmp.pos.1 + 3);
+        thread::Builder::new()
+            .name("1_test".into())
+            .spawn(move || {
+                for _ in 1..10 {
+                    {
+                        let tmp = &r.stack[0].buttons[0];
+                        *tmp.txt.to_mut() = "Play".into();
+                        *tmp.pos.to_mut() = (tmp.pos.0 - 2, tmp.pos.1 + 3);
+                    }
+
+                    sync_from(2);
                 }
 
-                sync_from(2);
-            }
-
-            thread::sleep(time::Duration::from_millis(10));
-            sync_to(0);
-        }).unwrap()
+                thread::sleep(time::Duration::from_millis(10));
+                sync_to(0);
+            }).unwrap()
     };
 
     thread::sleep(time::Duration::from_millis(10));
     handle.join().unwrap();
-    println!("{}: {} @ {:?}",
-        *r.stack[0].title,
-        *r.stack[0].buttons[0].txt,
-        *r.stack[0].buttons[0].pos
+    println!(
+        "{}: {} @ {:?}",
+        *r.stack[0].title, *r.stack[0].buttons[0].txt, *r.stack[0].buttons[0].pos
     );
 }
 
@@ -418,13 +430,17 @@ fn case04() {
     println!("{}", *a.1);
     {
         let a = a.clone();
-        thread::Builder::new().name("1_test".into()).spawn(move || {
-            // *(*a).1.to_mut() = 3;
-            a.to_mut().1 = Tl::new(3);
-            let _not_leak = Tl::new(100);
-            sync_from(2);
-            sync_to(0);
-        }).unwrap().join().unwrap();
+        thread::Builder::new()
+            .name("1_test".into())
+            .spawn(move || {
+                // *(*a).1.to_mut() = 3;
+                a.to_mut().1 = Tl::new(3);
+                let _not_leak = Tl::new(100);
+                sync_from(2);
+                sync_to(0);
+            }).unwrap()
+            .join()
+            .unwrap();
     }
     println!("{}", *a.1);
 }
