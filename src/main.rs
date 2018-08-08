@@ -3,7 +3,7 @@
 extern crate rayon;
 
 use std::thread;
-use std::cell::{UnsafeCell, RefCell};
+use std::cell::UnsafeCell;
 use std::time;
 use std::ops::Deref;
 use std::fmt::{self, Debug};
@@ -34,6 +34,14 @@ struct TrustCell<T> {
 
 unsafe impl<T> Sync for TrustCell<T> {}
 
+impl<T> Deref for TrustCell<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        self.get()
+    }
+}
+
 impl<T> TrustCell<T> {
     fn new(arr: [T; THREADS]) -> Self {
         Self {
@@ -45,7 +53,7 @@ impl<T> TrustCell<T> {
         unsafe { &(&*self.arr.get())[thread_index()] }
     }
 
-    fn get_mut(&self) -> &mut T {
+    fn to_mut(&self) -> &mut T {
         unsafe { &mut (&mut *self.arr.get())[THREADS - 1] }
     }
 }
@@ -83,27 +91,25 @@ impl<T> Deref for Tl<T> {
 }
 
 thread_local! {
-    static DIRTIES: RefCell<Vec<(u8, Box<Dirty>)>> = RefCell::new(vec![]);
+    static DIRTIES: TrustCell<Vec<(u8, Box<Dirty>)>> = TrustCell::new(Default::default());
 }
 
 fn sync_to(to: usize) {
     DIRTIES.with(|d| {
         let from = thread_index();
-        let mut d = d.borrow_mut();
 
         println!("SYNC {} -> {} : {}", from, to, d.len());
         d.iter().for_each(|it| it.1.sync(from, to));
-        d.clear();
+        d.to_mut().clear();
     });
 }
 
 fn sync_from(from: usize) {
     DIRTIES.with(|d| {
         let to = thread_index();
-        let mut d = d.borrow_mut();
 
         println!("SYNC {} <- {} : {}", to, from, d.len());
-        d.iter_mut().for_each(|it| {
+        d.to_mut().iter_mut().for_each(|it| {
             it.0 = 1;
             it.1.sync(from, to);
         });
@@ -119,7 +125,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
             DIRTIES.with(|d| {
                 let ptr = tmp.cell.arr.get();
 
-                for it in d.borrow().iter() {
+                for it in d.iter() {
                     if it.1.is_same_pointer(ptr as usize) {
                         if it.0 > 1 {
                             panic!("Only allow one mutation each sync");
@@ -128,11 +134,11 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
                     }
                 }
 
-                d.borrow_mut().push((2, tmp));
+                d.to_mut().push((2, tmp));
             });
         }
 
-        self.cell.get_mut()
+        self.cell.to_mut()
     }
 }
 
