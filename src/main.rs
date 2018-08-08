@@ -8,6 +8,8 @@ use std::time;
 use std::ops::Deref;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
+#[cfg(debug_assertions)]
+use std::sync::{Arc, Mutex};
 use rayon::prelude::*;
 
 const THREADS: usize = 3;
@@ -60,6 +62,9 @@ impl<T: ManualCopy<T>> TrustCell<T>  {
 struct TrustRc<T> {
     ptr: *mut T,
     counter: Rc<Cell<u8>>,
+    // Only dev mode need this, to avoid performance cost
+    #[cfg(debug_assertions)]
+    acounter: Arc<Mutex<u8>>,
 }
 
 unsafe impl<T> Send for TrustRc<T> {}
@@ -67,27 +72,56 @@ unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
-        let current_thread = thread_index();
-        if current_thread != 0 { return; }
-
-        let counter = self.counter.get();
-
-        if counter > 1 {
-            self.counter.set(counter - 1);
-        } else if counter == 1 {
-            self.counter.set(counter - 1);
-
-            unsafe {
-                std::ptr::drop_in_place(self.ptr);
-                std::ptr::write(self.ptr, std::mem::zeroed());
-            }
-            println!("\t\tDROP");
+        #[cfg(debug_assertions)]
+        {
+            let mut acounter = self.acounter.lock().unwrap();
+            *acounter -= 1;
         }
+
+        #[allow(unused)]
+        let did_drop = {
+            let current_thread = thread_index();
+            if current_thread != 0 { 
+                false
+            } else {
+                let counter = self.counter.get();
+
+                if counter > 1 {
+                    self.counter.set(counter - 1);
+                    false
+                } else if counter == 1 {
+                    self.counter.set(counter - 1);
+
+                    unsafe {
+                        std::ptr::drop_in_place(self.ptr);
+                        std::ptr::write(self.ptr, std::mem::zeroed());
+                    }
+                    println!("\t\tDROP");
+                    true
+                } else {
+                    false
+                }
+            }
+        };
+
+        #[cfg(debug_assertions)]
+        {
+            let acounter = self.acounter.lock().unwrap();
+            if !did_drop && *acounter == 0 {
+                panic!("TrustRc's leak memory detected");
+            } 
+        }        
     }
 }
 
 impl<T> Clone for TrustRc<T> {
     fn clone(&self) -> Self {
+        #[cfg(debug_assertions)]
+        {
+            let mut acounter = self.acounter.lock().unwrap();
+            *acounter += 1;
+        }
+
         let current_thread = thread_index();
         if current_thread == 0 {
             IS_CLONING_FOR_THREAD.with(|b| if !b.get() {
@@ -98,6 +132,8 @@ impl<T> Clone for TrustRc<T> {
         Self {
             ptr: self.ptr,
             counter: self.counter.clone(),
+            #[cfg(debug_assertions)]
+            acounter: self.acounter.clone(),
         }
     }
 }
@@ -124,6 +160,8 @@ impl<T> TrustRc<T> {
         Self {
             ptr,
             counter: Rc::new(Cell::new(1)),
+            #[cfg(debug_assertions)]
+            acounter: Arc::new(Mutex::new(1)),
         }
     }
 }
@@ -369,8 +407,8 @@ fn case02() {
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test pre {:?}", unsafe { &*c.cell.arr.get() });
             c.inner.to_mut().push(Wrapper { value: Tl::new(33), });
-            Tl::new(100);
-            println!("\t\t  LEAK HERE", );
+            // Tl::new(100);
+            // println!("\t\t  LEAK HERE", );
             println!("test change {:?}", unsafe { &*c.cell.arr.get() });
             sync_from(2);
             sync_to(0);
