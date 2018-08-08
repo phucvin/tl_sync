@@ -321,28 +321,28 @@ fn case02() {
     }
     impl Debug for Wrapper {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "Wrapper({:?})", unsafe { &*self.value.cell.arr.get() })
+            write!(f, "Wrapper {{ value: {:?} }}", unsafe { &*self.value.cell.arr.get() })
         }
     }
 
     let mut c: Tl<Holder> = Default::default();
     c.inner.push(Wrapper { value: Tl::new(22), });
     sync_to(1);
-    println!("main pre {:?}", *c);
+    println!("main pre {:?}", unsafe { &*c.cell.arr.get() });
     
     let handle = {
         let mut c = c.clone_to_thread();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            println!("test pre {:?}", *c);
+            println!("test pre {:?}", unsafe { &*c.cell.arr.get() });
             c.inner.push(Wrapper { value: Tl::new(33), });
-            println!("test change {:?}", *c);
+            println!("test change {:?}", unsafe { &*c.cell.arr.get() });
             sync_to(0);
-            println!("test post {:?}", *c);
+            println!("test post {:?}", unsafe { &*c.cell.arr.get() });
         }).unwrap()
     };
 
     handle.join().unwrap();
-    println!("main post {:?}", *c);
+    println!("main post {:?}", unsafe { &*c.cell.arr.get() });
 }
 
 #[allow(dead_code)]
@@ -424,6 +424,6 @@ fn main() {
     // case01();
     // println!();
     case02();
-    // println!();
-    // case03();
+    println!();
+    case03();
 }
