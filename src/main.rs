@@ -386,8 +386,9 @@ fn case04() {
     {
         let a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            *(*a).1.to_mut() = 3;
-            // a.to_mut().1 = Tl::new(3);
+            // *(*a).1.to_mut() = 3;
+            a.to_mut().1 = Tl::new(3);
+            let _not_leak = Tl::new(100);
             sync_from(2);
             sync_to(0);
         }).unwrap().join().unwrap();
