@@ -396,7 +396,6 @@ fn case03() {
 
 fn case04() {
     let tmp = Tl::new(1);
-    println!("--");
     let a = Tl::new((true, tmp));
     println!("{}", *a.1);
     {
