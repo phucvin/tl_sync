@@ -75,7 +75,9 @@ impl<T> Drop for TrustRc<T> {
         #[cfg(debug_assertions)]
         {
             let mut acounter = self.acounter.lock().unwrap();
-            *acounter -= 1;
+            if *acounter > 0 {
+                *acounter -= 1;
+            }
         }
 
         #[allow(unused)]
@@ -99,6 +101,7 @@ impl<T> Drop for TrustRc<T> {
                     println!("\t\tDROP");
                     true
                 } else {
+                    println!("SOMETHING WRONG");
                     false
                 }
             }
@@ -108,7 +111,8 @@ impl<T> Drop for TrustRc<T> {
         {
             let acounter = self.acounter.lock().unwrap();
             if !did_drop && *acounter == 0 {
-                panic!("TrustRc's leak memory detected");
+                // panic!("TrustRc's leak memory detected");
+                println!("maybe leak");
             }
         }
     }
@@ -118,8 +122,10 @@ impl<T> Clone for TrustRc<T> {
     fn clone(&self) -> Self {
         #[cfg(debug_assertions)]
         {
-            let mut acounter = self.acounter.lock().unwrap();
-            *acounter += 1;
+            // IS_CLONING_FOR_THREAD.with(|b| if !b.get() {
+                let mut acounter = self.acounter.lock().unwrap();
+                *acounter += 1;
+            // });
         }
 
         let current_thread = thread_index();
@@ -407,8 +413,8 @@ fn case02() {
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test pre {:?}", unsafe { &*c.cell.arr.get() });
             c.inner.to_mut().push(Wrapper { value: Tl::new(33), });
-            // Tl::new(100);
-            // println!("\t\t  LEAK HERE", );
+            let _leak = Tl::new(100);
+            println!("\t\t  LEAK HERE", );
             println!("test change {:?}", unsafe { &*c.cell.arr.get() });
             sync_from(2);
             sync_to(0);
