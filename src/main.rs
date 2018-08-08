@@ -72,6 +72,11 @@ unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
+        println!("{:?}", self.ptr);
+        if self.ptr as usize == 0 {
+            println!("alreayd null ptr");
+        }
+
         #[cfg(debug_assertions)]
         {
             let mut acounter = self.acounter.lock().unwrap();
@@ -84,24 +89,27 @@ impl<T> Drop for TrustRc<T> {
         let did_drop = {
             let current_thread = thread_index();
             if current_thread != 0 { 
+                println!("not main, no drop");
                 false
             } else {
                 let counter = self.counter.get();
 
                 if counter > 1 {
                     self.counter.set(counter - 1);
+                    println!("dec ref on main");
                     false
                 } else if counter == 1 {
                     self.counter.set(counter - 1);
 
                     unsafe {
                         std::ptr::drop_in_place(self.ptr);
-                        std::ptr::write(self.ptr, std::mem::zeroed());
+                        // std::ptr::write(self.ptr, std::mem::zeroed());
+                        self.ptr = 0 as *mut T;
                     }
                     println!("\t\tDROP");
                     true
                 } else {
-                    println!("SOMETHING WRONG");
+                    println!("SOMETHING WRONG {}", counter);
                     false
                 }
             }
@@ -161,11 +169,12 @@ impl<T: Default> Default for TrustRc<T> {
 impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
         let ptr = Box::into_raw_non_null(Box::new(value)).as_ptr();
+        let counter = if thread_index() == 0 { 1 } else { 1 };
 
         println!("\t\tNEW");
         Self {
             ptr,
-            counter: Rc::new(Cell::new(1)),
+            counter: Rc::new(Cell::new(counter)),
             #[cfg(debug_assertions)]
             acounter: Arc::new(Mutex::new(1)),
         }
