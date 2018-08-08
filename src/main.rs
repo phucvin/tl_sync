@@ -3,7 +3,7 @@
 use std::thread;
 use std::cell::{UnsafeCell, RefCell, Cell};
 use std::time;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
@@ -274,12 +274,12 @@ fn case01() {
     let b: Vec<Tl<Vec<u8>>> = vec![Tl::new(vec![1; 100]); 1024*100];
     
     let handle = {
-        let mut a = a.clone();
+        let a = a.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test a = {}", a[0]);
             thread::sleep(time::Duration::from_millis(20));
             println!("Done heavy in test");
-            a[0] = 2;
+            a.to_mut()[0] = 2;
             println!("test a = {}", a[0]);
         }).unwrap()
     };
@@ -330,8 +330,8 @@ fn case02() {
         }
     }
 
-    let mut c: Tl<Holder> = Default::default();
-    c.inner.push(Wrapper { value: Tl::new(22), });
+    let c: Tl<Holder> = Default::default();
+    c.inner.to_mut().push(Wrapper { value: Tl::new(22), });
     sync_to(1);
     println!("main pre {:?}", unsafe { &*c.cell.arr.get() });
     
@@ -339,7 +339,7 @@ fn case02() {
         let mut c = c.clone_to_thread();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test pre {:?}", unsafe { &*c.cell.arr.get() });
-            c.inner.push(Wrapper { value: Tl::new(33), });
+            c.inner.to_mut().push(Wrapper { value: Tl::new(33), });
             println!("test change {:?}", unsafe { &*c.cell.arr.get() });
             sync_to(0);
             println!("test post {:?}", unsafe { &*c.cell.arr.get() });
@@ -383,8 +383,8 @@ fn case03() {
         txt: Tl<String>,
     }
     
-    let mut r = Tl::new(SceneRoot::default());
-    r.stack.push(Scene {
+    let r = Tl::new(SceneRoot::default());
+    r.stack.to_mut().push(Scene {
         title: Tl::new("Home".into()),
         buttons: Tl::new(vec![
             Button {
@@ -403,12 +403,12 @@ fn case03() {
     sync_to(1);
 
     let handle = {
-        let mut r = r.clone();
+        let r = r.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             {
-                let tmp = &mut r.stack[0].buttons[0];
-                *tmp.txt = "Play".into();
-                *tmp.pos = (90, 60);
+                let tmp = &r.stack[0].buttons[0];
+                *tmp.txt.to_mut() = "Play".into();
+                *tmp.pos.to_mut() = (90, 60);
             }
 
             thread::sleep(time::Duration::from_millis(100));
