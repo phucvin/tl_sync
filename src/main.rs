@@ -166,8 +166,8 @@ fn sync_to(to: usize) {
     });
 }
 
-impl<T: 'static + ManualCopy<T>> DerefMut for Tl<T> {
-    fn deref_mut(&mut self) -> &mut T {
+impl<T: 'static + ManualCopy<T>> Tl<T> {
+    fn to_mut(&self) -> &mut T {
         {
             let tmp = Box::new(self.clone());
             DIRTIES.with(|d| {
