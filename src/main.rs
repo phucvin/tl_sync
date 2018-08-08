@@ -82,6 +82,8 @@ impl<T> Drop for TrustRc<T> {
                 std::ptr::write(self.ptr, std::mem::zeroed());
             }
             println!("\t\tDROP");
+        } else {
+            println!("\t\tAlready zero on DROP");
         }
     }
 }
@@ -272,15 +274,17 @@ impl<T: Clone> ManualCopy<Option<T>> for Option<T> {
     }
 }
 
-impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
+impl<T1: Clone, T2: Clone> ManualCopy<(T1, T2)> for (T1, T2) {
     fn copy_from(&mut self, other: &(T1, T2)) {
-        *self = *other;
+        // TODO If U: copy, try to use memcpy (=)
+        self.0 = other.0.clone();
+        self.1 = other.1.clone();
     }
 }
 
 impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
-        // TODO If U: Copy, try to use memcopy (copy_from_slice)
+        // TODO If U: Copy, try to use memcpy (copy_from_slice)
         let slen = self.len();
         let olen = other.len();
         
@@ -463,10 +467,27 @@ fn case03() {
     );
 }
 
+fn case04() {
+    let a = Tl::new((true, Tl::new(1)));
+    println!("{}", *a.1);
+    {
+        let a = a.clone_to_thread();
+        thread::Builder::new().name("1_test".into()).spawn(move || {
+            // *(*a).1.to_mut() = 3;
+            a.to_mut().1 = Tl::new(3);
+            sync_from(2);
+            sync_to(0);
+        }).unwrap().join().unwrap();
+    }
+    println!("{}", *a.1);
+}
+
 fn main() {
     // case01();
     // println!();
-    case02();
-    println!();
-    case03();
+    // case02();
+    // println!();
+    // case03();
+    // println!();
+    case04();
 }
