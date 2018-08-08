@@ -109,8 +109,8 @@ impl<T> Drop for TrustRc<T> {
             let acounter = self.acounter.lock().unwrap();
             if !did_drop && *acounter == 0 {
                 panic!("TrustRc's leak memory detected");
-            } 
-        }        
+            }
+        }
     }
 }
 
