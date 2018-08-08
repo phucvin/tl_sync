@@ -126,7 +126,6 @@ fn sync_to(to: usize) {
         let from = unsafe{ thread_index() };
         let mut d = d.borrow_mut();
 
-        println!("sync from {} to {}, total: {}", from, to, d.len());
         d.iter().for_each(|it| it.sync(from, to));
         d.clear();
     });
@@ -134,7 +133,6 @@ fn sync_to(to: usize) {
 
 impl<T: 'static + ManualCopy<T>> DerefMut for Tl<T> {
     fn deref_mut(&mut self) -> &mut T {
-        println!("deref_mut");
         {
             let tmp = Box::new(self.clone());
             DIRTIES.with(|d| {
@@ -203,7 +201,6 @@ impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
 
 impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
-        println!("manual copy vec {} <- {}", self.len(), other.len());
         let tmp = unsafe { std::mem::zeroed() };
         self.resize(other.len(), tmp);
         // TODO use copy_from_slice when possible, for faster (use memcpy)
@@ -302,19 +299,14 @@ fn case02() {
     let handle = {
         let mut r = r.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            // let tmp = &mut r.stack[0];//.buttons[0];
-            // *tmp.txt = "Play".into();
-            // *tmp.pos = (90, 60);
-            { let tmp = &mut (*r).stack[0]; }
+            {
+                let tmp = &mut r.stack[0].buttons[0];
+                *tmp.txt = "Play".into();
+                *tmp.pos = (90, 60);
+            }
 
             thread::sleep(time::Duration::from_millis(100));
             sync_to(0);
-            println!("{}: {} @ {:?}",
-                *r.stack[0].title,
-                *r.stack[0].buttons[0].txt,
-                *r.stack[0].buttons[0].pos
-            );
-            // sync_to(0);
         }).unwrap()
     };
 
