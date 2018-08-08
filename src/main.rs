@@ -434,9 +434,9 @@ fn main() {
 
     // case01();
     // println!();
-    case02();
+    // case02();
     // println!();
     // case03();
     // println!();
-    // case04();
+    case04();
 }
