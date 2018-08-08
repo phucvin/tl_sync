@@ -200,15 +200,12 @@ impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
     }
 }
 
-impl<U: Clone + Default + Debug> ManualCopy<Vec<U>> for Vec<U> {
+impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
-        println!("{:?} <- {:?}", *self, other);
-        let tmp = Default::default();//unsafe { std::mem::zeroed() };
+        let tmp = unsafe { std::mem::zeroed() };
         self.resize(other.len(), tmp);
-        println!("~~ {:?}", *self);
         // TODO use copy_from_slice when possible, for faster (use memcpy)
         self.clone_from_slice(other);
-        println!("-> {:?}", *self);
     }
 }
 
@@ -295,7 +292,6 @@ fn case02() {
     println!("main post {:?}", *c);
 }
 
-/*
 #[allow(dead_code)]
 fn case03() {
     #[derive(Clone)]
@@ -370,12 +366,11 @@ fn case03() {
         *r.stack[0].buttons[0].pos
     );
 }
-*/
 
 fn main() {
     // case01();
     // println!();
     case02();
-    // println!();
-    // case03();
+    println!();
+    case03();
 }
