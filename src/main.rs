@@ -279,7 +279,7 @@ fn case02() {
 
     #[derive(Clone, Default)]
     struct Holder {
-        inner: Tl<Vec<Wrapper>>,
+        inner: Vec<Wrapper>,
     }
     impl ManualCopy<Holder> for Holder {
         fn copy_from(&mut self, _: &Holder) {
