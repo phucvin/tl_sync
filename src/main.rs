@@ -243,8 +243,8 @@ fn case01() {
 
 #[allow(dead_code)]
 fn case02() {
-    // let _a: Tl<usize> = Tl::new(3);
-    // let _b: Tl<String> = Tl::new("apple".into());
+    let _a: Tl<usize> = Tl::new(3);
+    let _b: Tl<String> = Tl::new("apple".into());
 
     #[derive(Clone)]
     struct SceneRoot {
@@ -320,6 +320,7 @@ fn case02() {
 }
 
 fn main() {
-    // case01();
+    case01();
+    println!("");
     case02();
 }
