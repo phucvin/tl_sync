@@ -397,12 +397,12 @@ fn case03() {
                 *tmp.pos.to_mut() = (90, 60);
             }
 
-            thread::sleep(time::Duration::from_millis(100));
+            thread::sleep(time::Duration::from_millis(10));
             sync_to(0);
         }).unwrap()
     };
 
-    thread::sleep(time::Duration::from_millis(100));
+    thread::sleep(time::Duration::from_millis(10));
     handle.join().unwrap();
     println!("{}: {} @ {:?}",
         *r.stack[0].title,
