@@ -286,8 +286,6 @@ fn case02() {
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test pre {:?}", unsafe { &*c.cell.arr.get() });
             c.inner.to_mut().push(Wrapper { value: Tl::new(33), });
-            let _leak = Tl::new(100);
-            println!("\t\t  LEAK HERE", );
             println!("test change {:?}", unsafe { &*c.cell.arr.get() });
             sync_from(2);
             sync_to(0);
