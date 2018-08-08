@@ -267,14 +267,14 @@ fn case01() {
         let a = a.clone_to_thread();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test a = {}", a[0]);
-            thread::sleep(time::Duration::from_millis(20));
+            thread::sleep(time::Duration::from_millis(5));
             println!("Done heavy in test");
             a.to_mut()[0] = 2;
             println!("test a = {}", a[0]);
         }).unwrap()
     };
 
-    thread::sleep(time::Duration::from_millis(100));
+    thread::sleep(time::Duration::from_millis(10));
     println!("main a = {}", a[0]);
     println!("Done heavy in main");
     handle.join().unwrap();
