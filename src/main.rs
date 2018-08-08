@@ -75,7 +75,6 @@ impl<T> Drop for TrustRc<T> {
             self.counter.set(counter - 1);
             return;
         } else if counter == 1 {
-//println!("\t\t\t DROP");
             self.counter.set(counter - 1);
             unsafe { std::ptr::drop_in_place(self.ptr); }
             unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
@@ -110,7 +109,7 @@ impl<T> Deref for TrustRc<T> {
 impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
         let ptr = Box::into_raw_non_null(Box::new(value)).as_ptr();
-//println!("\t\t\t NEW");
+
         Self {
             ptr,
             counter: Rc::new(Cell::new(1)),
@@ -197,15 +196,8 @@ impl<T: Default + Clone + ManualCopy<T>> Default for Tl<T> {
 
 impl<T: Clone> Tl<T> {
     fn new(value: T) -> Self {
-        /*
-        let mut a: [T; THREADS] = unsafe { std::mem::zeroed() };
-        
-        for i in 1..THREADS {
-            a[i] = value.clone();
-        }
-        a[0] = value;
-        */
-
+        // TODO Find a way that flexible with thread,
+        // but also not using std::mem::zeroed (error with Rc)
         let tmp = value.clone();
         let a = [value, tmp];
 
@@ -230,7 +222,7 @@ impl ManualCopy<String> for String {
 
 impl<T: Clone> ManualCopy<Option<T>> for Option<T> {
     fn copy_from(&mut self, other: &Option<T>) {
-        // TODO Compare ptr to avoid clone
+        // TODO Compare ptr to avoid clone -> Not possible
         *self = match *other {
             None => None,
             Some(ref v) => Some(v.clone()),
@@ -246,15 +238,8 @@ impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
 
 impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
-        // TODO Compare ptr(s) to avoid copy or clone
-        
-        /*
-        let tmp = unsafe { std::mem::zeroed() };
-        self.resize(other.len(), tmp);
-        // TODO use copy_from_slice when possible, for faster (use memcpy)
-        self.clone_from_slice(other);
-        */
-               
+        // TODO Compare ptr(s) to avoid copy or clone -> Not possible
+        // TODO If U: Copy, try to use memcopy (copy_from_slice)
         let slen = self.len();
         let olen = other.len();
         
@@ -309,9 +294,6 @@ fn case01() {
 
 #[allow(dead_code)]
 fn case02() {
-    // let _a: Tl<usize> = Tl::new(3);
-    // let _b: Tl<String> = Tl::new("apple".into());
-
     #[derive(Clone, Default)]
     struct Holder {
         inner: Tl<Vec<Wrapper>>,
