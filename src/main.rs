@@ -459,9 +459,43 @@ fn test_closure() {
         println!("{} {}", b, c);
     }
 
-    let tc = TestClosure { a: 100 };
+    let mut tc = TestClosure { a: 100 };
     call_bc(&fake_bc, 5, 88);
     call_bc(&|b, c| tc.abc(b, c), 299, 0);
+    tc.a = 10;
+}
+
+#[allow(dead_code)]
+fn test_listeners() {
+    struct Emitter<'a> {
+        l: Vec<&'a mut FnMut()>,
+    }
+    impl<'a> Emitter<'a> {
+        fn add_listener(&mut self, f: &'a mut FnMut()) {
+            self.l.push(f);
+        }
+
+        fn notify(&mut self) {
+            println!("notify to {} listeners", self.l.len());
+            self.l.iter_mut().for_each(|it| it());
+        }
+    }
+
+    let mut a = 0;
+    let mut c1 = || {
+        println!("c1");
+    };
+    let mut c2 = || {
+        println!("c2");
+        a += 1;
+        println!("a = {}", a);
+    };
+    let mut e = Emitter { l: vec![] };
+    e.add_listener(&mut c1);
+    e.notify();
+    e.add_listener(&mut c2);
+    e.notify();
+    e.notify();
 }
 
 fn main() {
@@ -473,5 +507,8 @@ fn main() {
     // println!();
     // case03();
     // println!();
-    case04();
+    // case04();
+    
+    // test_closure();
+    test_listeners();
 }
