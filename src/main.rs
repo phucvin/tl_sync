@@ -10,6 +10,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::thread;
 use std::time;
+use std::collections::HashMap;
 
 const THREADS: usize = 3;
 
@@ -62,6 +63,7 @@ impl<T: ManualCopy<T>> TrustCell<T> {
 trait Dirty {
     fn sync(&self, from: usize, to: usize);
     fn is_same_pointer(&self, usize) -> bool;
+    fn notify(&self);
 }
 
 struct Tl<T> {
@@ -86,6 +88,7 @@ impl<T> Deref for Tl<T> {
 }
 
 static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
+static mut LISTENERS: Option<TrustCell<HashMap<Box<Dirty>, Vec<&Fn()>>>> = None;
 
 fn init_dirties() {
     unsafe {
@@ -156,8 +159,13 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
     fn sync(&self, from: usize, to: usize) {
         self.cell.inner_manual_copy(from, to);
     }
+
     fn is_same_pointer(&self, other: usize) -> bool {
         self.cell.arr.get() as usize == other
+    }
+
+    fn notify(&self) {
+
     }
 }
 
@@ -428,6 +436,32 @@ fn case04() {
             .unwrap();
     }
     println!("{}", *a.1);
+}
+
+#[allow(dead_code)]
+fn test_closure() {
+    struct TestClosure {
+        a: i32,
+    }
+    impl TestClosure {
+        fn abc(&self, b: i32, c: i32) {
+            println!("{} {} {}", self.a, b, c);
+        }
+
+        fn ma(&mut self, v: i32) {
+            self.a = v;
+        }
+    }
+    fn call_bc(f: &Fn(i32, i32), b: i32, c: i32) {
+        f(b, c);
+    }
+    fn fake_bc(b: i32, c: i32) {
+        println!("{} {}", b, c);
+    }
+
+    let tc = TestClosure { a: 100 };
+    call_bc(&fake_bc, 5, 88);
+    call_bc(&|b, c| tc.abc(b, c), 299, 0);
 }
 
 fn main() {
