@@ -21,7 +21,7 @@ thread_local! {
     static IS_CLONING_FOR_THREAD: Cell<bool> = Cell::new(false);
 }
 
-unsafe fn thread_index() -> usize {
+fn thread_index() -> usize {
     CACHED_THREAD_INDEX.with(|c| *c)
 }
 
@@ -67,7 +67,7 @@ unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
-        let current_thread = unsafe { thread_index() };
+        let current_thread = thread_index();
         if current_thread != 0 { return; }
 
         let counter = self.counter.get();
@@ -84,7 +84,7 @@ impl<T> Drop for TrustRc<T> {
 
 impl<T> Clone for TrustRc<T> {
     fn clone(&self) -> Self {
-        let current_thread = unsafe { thread_index() };
+        let current_thread = thread_index();
         if current_thread == 0 {
             IS_CLONING_FOR_THREAD.with(|b| if !b.get() {
                 self.counter.set(self.counter.get() + 1);
@@ -162,7 +162,7 @@ thread_local! {
 
 fn sync_to(to: usize) {
     DIRTIES.with(|d| {
-        let from = unsafe{ thread_index() };
+        let from = thread_index();
         let mut d = d.borrow_mut();
 
         println!("SYNC {} -> {} : {}", from, to, d.len());
@@ -173,7 +173,7 @@ fn sync_to(to: usize) {
 
 fn sync_from(from: usize) {
     DIRTIES.with(|d| {
-        let to = unsafe{ thread_index() };
+        let to = thread_index();
         let mut d = d.borrow_mut();
 
         println!("SYNC {} <- {} : {}", to, from, d.len());
