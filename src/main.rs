@@ -75,6 +75,7 @@ impl<T> Drop for TrustRc<T> {
             self.counter.set(counter - 1);
             return;
         } else if counter == 1 {
+//println!("\t\t\t DROP");
             self.counter.set(counter - 1);
             unsafe { std::ptr::drop_in_place(self.ptr); }
             unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
@@ -109,7 +110,7 @@ impl<T> Deref for TrustRc<T> {
 impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
         let ptr = Box::into_raw_non_null(Box::new(value)).as_ptr();
-
+//println!("\t\t\t NEW");
         Self {
             ptr,
             counter: Rc::new(Cell::new(1)),
@@ -274,7 +275,10 @@ impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
 #[allow(dead_code)]
 fn case01() {
     let a: Tl<Vec<u8>> = Tl::new(vec![1; 1024*1024]);
-    let b: Vec<Tl<Vec<u8>>> = vec![Tl::new(vec![1; 10]); 1024*100];
+    let mut b: Vec<Tl<Vec<u8>>> = vec![];
+    for _i in 1..100 {
+        b.push(Tl::new(vec![1; 1024*100]));
+    }
     
     let handle = {
         let a = a.clone_to_thread();
@@ -405,7 +409,7 @@ fn case03() {
     sync_to(1);
 
     let handle = {
-        let r = r.clone();
+        let r = r.clone_to_thread();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             {
                 let tmp = &r.stack[0].buttons[0];
