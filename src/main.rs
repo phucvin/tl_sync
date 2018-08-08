@@ -68,8 +68,8 @@ impl<T> Drop for TrustRc<T> {
         if !is_main_thread { return; }
 
         println!("Trust DROP {:?}", self.ptr);
-        // unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
-        // unsafe { std::ptr::drop_in_place(self.ptr); }
+        unsafe { std::ptr::drop_in_place(self.ptr); }
+        unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
     }
 }
 
@@ -297,6 +297,7 @@ fn case02() {
     }
 
     let mut c: Tl<Holder> = Default::default();
+    println!("--");
     c.inner.push(Wrapper { value: Tl::new(22), });
     sync_to(1);
     println!("main pre {:?}", *c);
