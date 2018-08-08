@@ -1,11 +1,14 @@
 #![feature(box_into_raw_non_null)]
 
+extern crate rayon;
+
 use std::thread;
 use std::cell::{UnsafeCell, RefCell, Cell};
 use std::time;
 use std::ops::Deref;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
+use rayon::prelude::*;
 
 const THREADS: usize = 2;
 
@@ -270,11 +273,11 @@ impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
 
 #[allow(dead_code)]
 fn case01() {
-    let a: Tl<Vec<u32>> = Tl::new(vec![1; 1024*1024]);
-    let b: Vec<Tl<Vec<u8>>> = vec![Tl::new(vec![1; 100]); 1024*100];
+    let a: Tl<Vec<u8>> = Tl::new(vec![1; 1024*1024]);
+    let b: Vec<Tl<Vec<u8>>> = vec![Tl::new(vec![1; 10]); 1024*100];
     
     let handle = {
-        let a = a.clone();
+        let a = a.clone_to_thread();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test a = {}", a[0]);
             thread::sleep(time::Duration::from_millis(20));
@@ -292,10 +295,9 @@ fn case01() {
     {
         let now = time::Instant::now();
         a.sync(1, 0);
-        // TODO Try par_iter
-        b.iter().for_each(|it| it.sync(1, 0));
+        b.par_iter().for_each(|it| it.sync(1, 0));
         let duration = now.elapsed();
-        println!("sync takes {}s + {}us", duration.as_secs(), duration.subsec_micros());
+        println!("sync takes {}s + {}ms", duration.as_secs(), duration.subsec_millis());
     }
     println!("SYNC");
     println!("main a = {}", a[0]);
@@ -426,8 +428,8 @@ fn case03() {
 }
 
 fn main() {
-    // case01();
-    // println!();
+    case01();
+    println!();
     case02();
     println!();
     case03();
