@@ -469,7 +469,9 @@ fn case03() {
 }
 
 fn case04() {
-    let a = Tl::new((true, Tl::new(1)));
+    let tmp = Tl::new(1);
+    println!("--");
+    let a = Tl::new((true, tmp));
     println!("{}", *a.1);
     {
         let a = a.clone_to_thread();
