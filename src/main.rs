@@ -62,12 +62,14 @@ unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
+        let is_main_thread = unsafe { thread_index() } == 0;
+        println!("Trust pre-DROP {:?}, org: {}, main: {}", self.ptr, self.is_org, is_main_thread);
         if !self.is_org { return; }
-        if unsafe { thread_index() } != 0 { return; }
+        if !is_main_thread { return; }
 
         println!("Trust DROP {:?}", self.ptr);
-        unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
-        unsafe { std::ptr::drop_in_place(self.ptr); }
+        // unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
+        // unsafe { std::ptr::drop_in_place(self.ptr); }
     }
 }
 
@@ -165,12 +167,16 @@ impl<T: Default + Clone + ManualCopy<T>> Default for Tl<T> {
 
 impl<T: Clone> Tl<T> {
     fn new(value: T) -> Self {
+        /*
         let mut a: [T; THREADS] = unsafe { std::mem::zeroed() };
         
         for i in 1..THREADS {
             a[i] = value.clone();
         }
         a[0] = value;
+        */
+       let tmp = value.clone();
+       let a = [value, tmp];
 
         Self {
             cell: TrustRc::new(TrustCell::new(a)),
@@ -193,6 +199,7 @@ impl ManualCopy<String> for String {
 
 impl<T: Clone> ManualCopy<Option<T>> for Option<T> {
     fn copy_from(&mut self, other: &Option<T>) {
+        // TODO Compare ptr to avoid clone
         *self = match *other {
             None => None,
             Some(ref v) => Some(v.clone()),
@@ -208,11 +215,27 @@ impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
 
 impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
+        // TODO Compare ptr(s) to avoid copy or clone
+        /*
         let tmp = unsafe { std::mem::zeroed() };
         self.resize(other.len(), tmp);
-        println!("vec manual copy");
         // TODO use copy_from_slice when possible, for faster (use memcpy)
         self.clone_from_slice(other);
+        */
+        let slen = self.len();
+        let olen = other.len();
+        
+        if slen < olen {
+            for i in slen..olen {
+                self.push(other[i].clone());
+            }
+        } else if slen > olen {
+            self.truncate(olen)
+        }
+
+        for i in 0..(std::cmp::min(slen, olen)) {
+            self[i] = other[i].clone();
+        }
     }
 }
 
@@ -251,8 +274,8 @@ fn case01() {
 
 #[allow(dead_code)]
 fn case02() {
-    let _a: Tl<usize> = Tl::new(3);
-    let _b: Tl<String> = Tl::new("apple".into());
+    // let _a: Tl<usize> = Tl::new(3);
+    // let _b: Tl<String> = Tl::new("apple".into());
 
     #[derive(Clone, Default)]
     struct Holder {
@@ -289,8 +312,7 @@ fn case02() {
             println!("test pre {:?}", *c);
             c.inner.push(Wrapper { value: Tl::new(33), });
             println!("test change {:?}", *c);
-            //sync_to(0);
-            c.inner.sync(1, 0);
+            sync_to(0);
             println!("test post {:?}", *c);
         }).unwrap()
     };
