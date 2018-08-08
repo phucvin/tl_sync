@@ -15,6 +15,7 @@ thread_local! {
         Some(name) => 1 + (name.as_bytes()[0] - '1' as u8) as usize,
         None => panic!("Invalid thread name to get index")
     };
+    static IS_CLONING_FOR_THREAD: Cell<bool> = Cell::new(false);
 }
 
 unsafe fn thread_index() -> usize {
@@ -66,16 +67,15 @@ impl<T> Drop for TrustRc<T> {
         let current_thread = unsafe { thread_index() };
         if current_thread != 0 { return; }
 
-        let counter = self.counter.get() - 1;
-        println!("{:?} dec to {}", self.ptr, counter);
-        if counter > 0 {
-            self.counter.set(counter);
+        let counter = self.counter.get();
+        if counter > 1 {
+            self.counter.set(counter - 1);
             return;
+        } else if counter == 1 {
+            self.counter.set(counter - 1);
+            unsafe { std::ptr::drop_in_place(self.ptr); }
+            unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
         }
-
-        println!("Trust DROP {:?}", self.ptr);
-        unsafe { std::ptr::drop_in_place(self.ptr); }
-        unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
     }
 }
 
@@ -83,8 +83,9 @@ impl<T> Clone for TrustRc<T> {
     fn clone(&self) -> Self {
         let current_thread = unsafe { thread_index() };
         if current_thread == 0 {
-            self.counter.set(self.counter.get() + 1);
-            println!("{:?} inc to {}", self.ptr, self.counter.get());
+            IS_CLONING_FOR_THREAD.with(|b| if !b.get() {
+                self.counter.set(self.counter.get() + 1);
+            });
         }
 
         Self {
@@ -105,7 +106,6 @@ impl<T> Deref for TrustRc<T> {
 impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
         let ptr = Box::into_raw_non_null(Box::new(value)).as_ptr();
-        println!("Trust NEW {:?}", ptr);
 
         Self {
             ptr,
@@ -127,6 +127,20 @@ impl<T> Clone for Tl<T> {
         Self {
             cell: self.cell.clone(),
         }
+    }
+}
+
+impl<T> Tl<T> {
+    fn clone_to_thread(&self) -> Self {
+        IS_CLONING_FOR_THREAD.with(|b| {
+            let ret;
+            
+            b.set(true);
+            ret = self.clone();
+            b.set(false);
+
+            ret
+        })
     }
 }
 
@@ -317,7 +331,7 @@ fn case02() {
     println!("main pre {:?}", *c);
     
     let handle = {
-        let mut c = c.clone();
+        let mut c = c.clone_to_thread();
         thread::Builder::new().name("1_test".into()).spawn(move || {
             println!("test pre {:?}", *c);
             c.inner.push(Wrapper { value: Tl::new(33), });
