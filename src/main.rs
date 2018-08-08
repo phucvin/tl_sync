@@ -35,14 +35,6 @@ struct TrustCell<T> {
 
 unsafe impl<T> Sync for TrustCell<T> {}
 
-impl<T> Deref for TrustCell<T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        self.get()
-    }
-}
-
 impl<T> TrustCell<T> {
     const fn new(arr: [T; THREADS]) -> Self {
         Self {
@@ -50,16 +42,12 @@ impl<T> TrustCell<T> {
         }
     }
 
-    fn get(&self) -> &T {
-        unsafe { &(&*self.arr.get())[thread_index()] }
+    fn get(&self, i: usize) -> &T {
+        unsafe { &(&*self.arr.get())[i] }
     }
 
-    fn to_mut(&self) -> &mut T {
-        unsafe { &mut (&mut *self.arr.get())[THREADS - 1] }
-    }
-
-    unsafe fn to_mut_same_thread(&self) -> &mut T {
-        &mut (&mut *self.arr.get())[thread_index()]
+    fn to_mut(&self, i: usize) -> &mut T {
+        unsafe { &mut (&mut *self.arr.get())[i] }
     }
 }
 
@@ -93,7 +81,7 @@ impl<T> Deref for Tl<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        self.cell.get()
+        self.cell.get(thread_index())
     }
 }
 
@@ -115,21 +103,19 @@ fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
 }
 
 fn sync_to(to: usize) {
-    let d = get_dirties();
     let from = thread_index();
+    let d = get_dirties().to_mut(from);
 
     println!("SYNC {} -> {} : {}", from, to, d.len());
     d.iter().for_each(|it| it.1.sync(from, to));
-    let d = unsafe { d.to_mut_same_thread() };
     d.clear();
 }
 
 fn sync_from(from: usize) {
-    let d = get_dirties();
     let to = thread_index();
+    let d = get_dirties().to_mut(to);
 
     println!("SYNC {} <- {} : {}", to, from, d.len());
-    let d = unsafe { d.to_mut_same_thread() };
     d.iter_mut().for_each(|it| {
         it.0 = 1;
         it.1.sync(from, to);
@@ -142,7 +128,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
         // even in different sync calls, then should panic
 
         {
-            let d = get_dirties();
+            let d = get_dirties().to_mut(thread_index());
             let tmp = Box::new(self.clone());
             let ptr = tmp.cell.arr.get();
 
@@ -158,12 +144,11 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
             }
 
             if is_unique {
-                let d = unsafe { d.to_mut_same_thread() };
                 d.push((2, tmp));
             }
         }
 
-        self.cell.to_mut()
+        self.cell.to_mut(THREADS - 1)
     }
 }
 
