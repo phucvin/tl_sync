@@ -67,6 +67,7 @@ unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
+        println!("\t\t\tdrop called at thread {}", thread_index());
         let current_thread = thread_index();
         if current_thread != 0 { return; }
 
@@ -83,7 +84,7 @@ impl<T> Drop for TrustRc<T> {
             }
             println!("\t\tDROP");
         } else {
-            println!("\t\tAlready zero on DROP");
+            println!("\t\tZERO DROP");
         }
     }
 }
@@ -475,6 +476,7 @@ fn case04() {
         thread::Builder::new().name("1_test".into()).spawn(move || {
             // *(*a).1.to_mut() = 3;
             a.to_mut().1 = Tl::new(3);
+            println!("--");
             sync_from(2);
             sync_to(0);
         }).unwrap().join().unwrap();
