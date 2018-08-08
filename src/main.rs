@@ -222,7 +222,6 @@ impl ManualCopy<String> for String {
 
 impl<T: Clone> ManualCopy<Option<T>> for Option<T> {
     fn copy_from(&mut self, other: &Option<T>) {
-        // TODO Compare ptr to avoid clone -> Not possible
         *self = match *other {
             None => None,
             Some(ref v) => Some(v.clone()),
@@ -238,7 +237,6 @@ impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
 
 impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
-        // TODO Compare ptr(s) to avoid copy or clone -> Not possible
         // TODO If U: Copy, try to use memcopy (copy_from_slice)
         let slen = self.len();
         let olen = other.len();
