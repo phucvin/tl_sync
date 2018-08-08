@@ -64,7 +64,8 @@ impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
         if !self.is_org { return; }
         if unsafe { thread_index() } != 0 { return; }
-        println!("drop");
+
+        println!("Trust DROP {:?}", self.ptr);
         unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
         unsafe { std::ptr::drop_in_place(self.ptr); }
     }
@@ -89,8 +90,11 @@ impl<T> Deref for TrustRc<T> {
 
 impl<T> TrustRc<T> {
     fn new(value: T) -> Self {
+        let ptr = Box::into_raw_non_null(Box::new(value)).as_ptr();
+        println!("Trust NEW {:?}", ptr);
+
         Self {
-            ptr: Box::into_raw_non_null(Box::new(value)).as_ptr(),
+            ptr,
             is_org: true,
         }
     }
