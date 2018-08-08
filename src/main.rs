@@ -4,6 +4,7 @@ use std::thread;
 use std::cell::{UnsafeCell, RefCell};
 use std::time;
 use std::ops::{Deref, DerefMut};
+use std::fmt::{self, Debug};
 
 const THREADS: usize = 2;
 
@@ -60,11 +61,11 @@ unsafe impl<T> Send for TrustRc<T> {}
 unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
-    fn drop(&mut self) {
+    fn drop(&mut self) {/*
         if !self.is_org { return; }
         unsafe { std::ptr::write(self.ptr, std::mem::zeroed()); }
         unsafe { std::ptr::drop_in_place(self.ptr); }
-    }
+    */}
 }
 
 impl<T> Clone for TrustRc<T> {
@@ -199,12 +200,15 @@ impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
     }
 }
 
-impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
+impl<U: Clone + Default + Debug> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
-        let tmp = unsafe { std::mem::zeroed() };
+        println!("{:?} <- {:?}", *self, other);
+        let tmp = Default::default();//unsafe { std::mem::zeroed() };
         self.resize(other.len(), tmp);
+        println!("~~ {:?}", *self);
         // TODO use copy_from_slice when possible, for faster (use memcpy)
         self.clone_from_slice(other);
+        println!("-> {:?}", *self);
     }
 }
 
@@ -246,23 +250,52 @@ fn case02() {
     let _a: Tl<usize> = Tl::new(3);
     let _b: Tl<String> = Tl::new("apple".into());
     
-    let mut c: Tl<Vec<usize>> = Default::default();
-    c.push(22);
+    #[derive(Clone, Default)]
+    struct Holder {
+        inner: Tl<Vec<Wrapper>>,
+    }
+    impl ManualCopy<Holder> for Holder {
+        fn copy_from(&mut self, _: &Holder) {
+            // Ignore on purpose
+        }
+    }
+    impl Debug for Holder {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "Holder({:?})", unsafe { &*self.inner.cell.arr.get() })
+        }
+    }
+    #[derive(Clone, Default)]
+    struct Wrapper {
+        value: Tl<usize>,
+    }
+    impl Debug for Wrapper {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "Wrapper({:?})", unsafe { &*self.value.cell.arr.get() })
+        }
+    }
+
+    let mut c: Tl<Holder> = Default::default();
+    c.inner.push(Wrapper { value: Tl::new(22), });
     sync_to(1);
-    println!("{:?}", unsafe { &*c.cell.arr.get() });
+    println!("main pre {:?}", *c);
     
     let handle = {
         let mut c = c.clone();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            c.push(33);
-            sync_to(0);
+            println!("test pre {:?}", *c);
+            c.inner.push(Wrapper { value: Tl::new(33), });
+            println!("test change {:?}", *c);
+            //sync_to(0);
+            c.inner.sync(1, 0);
+            println!("test post {:?}", *c);
         }).unwrap()
     };
 
     handle.join().unwrap();
-    println!("{:?}", unsafe { &*c.cell.arr.get() });
+    println!("main post {:?}", *c);
 }
 
+/*
 #[allow(dead_code)]
 fn case03() {
     #[derive(Clone)]
@@ -337,6 +370,7 @@ fn case03() {
         *r.stack[0].buttons[0].pos
     );
 }
+*/
 
 fn main() {
     // case01();
