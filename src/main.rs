@@ -1,10 +1,11 @@
 #![feature(box_into_raw_non_null)]
 
 use std::thread;
-use std::cell::{UnsafeCell, RefCell};
+use std::cell::{UnsafeCell, RefCell, Cell};
 use std::time;
 use std::ops::{Deref, DerefMut};
 use std::fmt::{self, Debug};
+use std::rc::Rc;
 
 const THREADS: usize = 2;
 
@@ -54,7 +55,7 @@ impl<T: ManualCopy<T>> TrustCell<T>  {
 
 struct TrustRc<T> {
     ptr: *mut T,
-    is_org: bool,
+    counter: Rc<Cell<u8>>,
 }
 
 unsafe impl<T> Send for TrustRc<T> {}
@@ -62,10 +63,15 @@ unsafe impl<T> Sync for TrustRc<T> {}
 
 impl<T> Drop for TrustRc<T> {
     fn drop(&mut self) {
-        let is_main_thread = unsafe { thread_index() } == 0;
-        println!("Trust pre-DROP {:?}, org: {}, main: {}", self.ptr, self.is_org, is_main_thread);
-        if !self.is_org { return; }
-        if !is_main_thread { return; }
+        let current_thread = unsafe { thread_index() };
+        if current_thread != 0 { return; }
+
+        let counter = self.counter.get() - 1;
+        println!("{:?} dec to {}", self.ptr, counter);
+        if counter > 0 {
+            self.counter.set(counter);
+            return;
+        }
 
         println!("Trust DROP {:?}", self.ptr);
         unsafe { std::ptr::drop_in_place(self.ptr); }
@@ -75,9 +81,15 @@ impl<T> Drop for TrustRc<T> {
 
 impl<T> Clone for TrustRc<T> {
     fn clone(&self) -> Self {
+        let current_thread = unsafe { thread_index() };
+        if current_thread == 0 {
+            self.counter.set(self.counter.get() + 1);
+            println!("{:?} inc to {}", self.ptr, self.counter.get());
+        }
+
         Self {
             ptr: self.ptr,
-            is_org: false,
+            counter: self.counter.clone(),
         }
     }
 }
@@ -97,7 +109,7 @@ impl<T> TrustRc<T> {
 
         Self {
             ptr,
-            is_org: true,
+            counter: Rc::new(Cell::new(1)),
         }
     }
 }
@@ -175,8 +187,9 @@ impl<T: Clone> Tl<T> {
         }
         a[0] = value;
         */
-       let tmp = value.clone();
-       let a = [value, tmp];
+
+        let tmp = value.clone();
+        let a = [value, tmp];
 
         Self {
             cell: TrustRc::new(TrustCell::new(a)),
@@ -216,12 +229,14 @@ impl<T1: Copy, T2: Copy> ManualCopy<(T1, T2)> for (T1, T2) {
 impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
         // TODO Compare ptr(s) to avoid copy or clone
+        
         /*
         let tmp = unsafe { std::mem::zeroed() };
         self.resize(other.len(), tmp);
         // TODO use copy_from_slice when possible, for faster (use memcpy)
         self.clone_from_slice(other);
         */
+               
         let slen = self.len();
         let olen = other.len();
         
@@ -297,7 +312,6 @@ fn case02() {
     }
 
     let mut c: Tl<Holder> = Default::default();
-    println!("--");
     c.inner.push(Wrapper { value: Tl::new(22), });
     sync_to(1);
     println!("main pre {:?}", *c);
@@ -396,6 +410,6 @@ fn main() {
     // case01();
     // println!();
     case02();
-    println!();
-    case03();
+    // println!();
+    // case03();
 }
