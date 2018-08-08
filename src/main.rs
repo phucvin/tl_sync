@@ -1,4 +1,5 @@
 #![feature(box_into_raw_non_null)]
+#![feature(const_fn)]
 
 extern crate rayon;
 
@@ -43,7 +44,7 @@ impl<T> Deref for TrustCell<T> {
 }
 
 impl<T> TrustCell<T> {
-    fn new(arr: [T; THREADS]) -> Self {
+    const fn new(arr: [T; THREADS]) -> Self {
         Self {
             arr: UnsafeCell::new(arr),
         }
@@ -90,29 +91,33 @@ impl<T> Deref for Tl<T> {
     }
 }
 
-thread_local! {
-    static DIRTIES: TrustCell<Vec<(u8, Box<Dirty>)>> = TrustCell::new(Default::default());
+static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
+fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
+    unsafe {
+        match DIRTIES {
+            Some(ref d) => d,
+            None => panic!("Uninitialized DIRTIES"),
+        }
+    }
 }
 
 fn sync_to(to: usize) {
-    DIRTIES.with(|d| {
-        let from = thread_index();
+    let d = get_dirties();
+    let from = thread_index();
 
-        println!("SYNC {} -> {} : {}", from, to, d.len());
-        d.iter().for_each(|it| it.1.sync(from, to));
-        d.to_mut().clear();
-    });
+    println!("SYNC {} -> {} : {}", from, to, d.len());
+    d.iter().for_each(|it| it.1.sync(from, to));
+    d.to_mut().clear();
 }
 
 fn sync_from(from: usize) {
-    DIRTIES.with(|d| {
-        let to = thread_index();
+    let d = get_dirties();
+    let to = thread_index();
 
-        println!("SYNC {} <- {} : {}", to, from, d.len());
-        d.to_mut().iter_mut().for_each(|it| {
-            it.0 = 1;
-            it.1.sync(from, to);
-        });
+    println!("SYNC {} <- {} : {}", to, from, d.len());
+    d.to_mut().iter_mut().for_each(|it| {
+        it.0 = 1;
+        it.1.sync(from, to);
     });
 }
 
@@ -121,21 +126,24 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
         // TODO Dev check if caller come from different places
         // even in different sync calls, then should panic
         {
+            let d = get_dirties();
             let tmp = Box::new(self.clone());
-            DIRTIES.with(|d| {
-                let ptr = tmp.cell.arr.get();
+            let ptr = tmp.cell.arr.get();
 
-                for it in d.iter() {
-                    if it.1.is_same_pointer(ptr as usize) {
-                        if it.0 > 1 {
-                            panic!("Only allow one mutation each sync");
-                        }
-                        return;
+            let mut is_unique = true;
+            for it in d.iter() {
+                if it.1.is_same_pointer(ptr as usize) {
+                    if it.0 > 1 {
+                        panic!("Only allow one mutation each sync");
                     }
+                    is_unique = false;
+                    break;
                 }
+            }
 
+            if is_unique {
                 d.to_mut().push((2, tmp));
-            });
+            }
         }
 
         self.cell.to_mut()
@@ -409,7 +417,7 @@ fn case04() {
 fn main() {
     // case01();
     // println!();
-    // case02();
+    case02();
     // println!();
     // case03();
     // println!();
