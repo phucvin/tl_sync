@@ -312,7 +312,7 @@ fn case02() {
     }
     impl ManualCopy<Holder> for Holder {
         fn copy_from(&mut self, _other: &Holder) {
-            // Ignore on purpose
+            panic!("SHOULD NEVER BE CALLED");
         }
     }
     impl Debug for Holder {
@@ -369,7 +369,7 @@ fn case03() {
     }
     impl ManualCopy<SceneRoot> for SceneRoot {
         fn copy_from(&mut self, _other: &SceneRoot) {
-            // Do nothing on purpose
+            panic!("SHOULD NEVER BE CALLED");
         }
     }
     #[derive(Default, Clone)]
