@@ -306,13 +306,18 @@ fn case02() {
     // let _a: Tl<usize> = Tl::new(3);
     // let _b: Tl<String> = Tl::new("apple".into());
 
-    #[derive(Clone, Default, Debug)]
+    #[derive(Clone, Default)]
     struct Holder {
-        inner: Vec<Wrapper>,
+        inner: Tl<Vec<Wrapper>>,
     }
     impl ManualCopy<Holder> for Holder {
-        fn copy_from(&mut self, other: &Holder) {
-            self.inner = other.inner.clone();
+        fn copy_from(&mut self, _other: &Holder) {
+            // Ignore on purpose
+        }
+    }
+    impl Debug for Holder {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "Holder {{ inner: {:?} }}", unsafe { &*self.inner.cell.arr.get() })
         }
     }
     #[derive(Clone, Default)]
