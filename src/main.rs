@@ -7,7 +7,7 @@ use std::cell::{UnsafeCell, RefCell, Cell};
 use std::time;
 use std::ops::Deref;
 use std::fmt::{self, Debug};
-use std::rc::Rc;
+use std::sync::Arc;
 use rayon::prelude::*;
 
 const THREADS: usize = 3;
@@ -57,87 +57,13 @@ impl<T: ManualCopy<T>> TrustCell<T>  {
     }
 }
 
-struct TrustRc<T> {
-    ptr: *mut T,
-    counter: Rc<Cell<u8>>,
-}
-
-unsafe impl<T> Send for TrustRc<T> {}
-unsafe impl<T> Sync for TrustRc<T> {}
-
-impl<T> Drop for TrustRc<T> {
-    fn drop(&mut self) {
-        // println!("\t\t\tdrop called at thread {}", thread_index());
-        let current_thread = thread_index();
-        if current_thread != 0 { return; }
-
-        let counter = self.counter.get();
-
-        if counter > 1 {
-            self.counter.set(counter - 1);
-        } else if counter == 1 {
-            self.counter.set(counter - 1);
-
-            println!("\t\tDROP {:?}", self.ptr);
-            unsafe {
-                std::ptr::drop_in_place(self.ptr);
-                std::ptr::write(self.ptr, std::mem::zeroed());
-            }
-        } else {
-            // println!("\t\tZERO DROP");
-        }
-    }
-}
-
-impl<T> Clone for TrustRc<T> {
-    fn clone(&self) -> Self {
-        let current_thread = thread_index();
-        if current_thread == 0 {
-            IS_CLONING_FOR_THREAD.with(|b| if !b.get() {
-                self.counter.set(self.counter.get() + 1);
-            });
-        }
-
-        Self {
-            ptr: self.ptr,
-            counter: self.counter.clone(),
-        }
-    }
-}
-
-impl<T> Deref for TrustRc<T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        unsafe { &*self.ptr }
-    }
-}
-
-impl<T: Default> Default for TrustRc<T> {
-    fn default() -> Self {
-        Self::new(T::default())
-    }
-}
-
-impl<T> TrustRc<T> {
-    fn new(value: T) -> Self {
-        let ptr = Box::into_raw_non_null(Box::new(value)).as_ptr();
-
-        println!("\t\tNEW {:?}", ptr);
-        Self {
-            ptr,
-            counter: Rc::new(Cell::new(1)),
-        }
-    }
-}
-
 trait Dirty {
     fn sync(&self, from: usize, to: usize);
     fn is_same_pointer(&self, usize) -> bool;
 }
 
 struct Tl<T> {
-    cell: TrustRc<TrustCell<T>>,
+    cell: Arc<TrustCell<T>>,
 }
 
 impl<T> Clone for Tl<T> {
@@ -205,7 +131,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
         {
             let tmp = Box::new(self.clone());
             DIRTIES.with(|d| {
-                let ptr = tmp.cell.ptr;
+                let ptr = tmp.cell.arr.get();
 
                 for it in d.borrow().iter() {
                     if it.1.is_same_pointer(ptr as usize) {
@@ -229,7 +155,7 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         self.cell.inner_manual_copy(from, to);
     }
     fn is_same_pointer(&self, other: usize) -> bool {
-        self.cell.ptr as usize == other
+        self.cell.arr.get() as usize == other
     }
 }
 
@@ -248,7 +174,7 @@ impl<T: Clone> Tl<T> {
         let a = [value, tmp1, tmp2];
 
         Self {
-            cell: TrustRc::new(TrustCell::new(a)),
+            cell: Arc::new(TrustCell::new(a)),
         }
     }
 }
@@ -413,7 +339,7 @@ fn case03() {
     struct Scene {
         title: Tl<String>,
         buttons: Tl<Vec<Button>>,
-        image_data: TrustRc<Vec<u8>>,
+        image_data: Arc<Vec<u8>>,
     }
     #[derive(Default, Clone)]
     struct Button {
@@ -430,7 +356,7 @@ fn case03() {
                 txt: Tl::new("Click Me!".into()),
             }
         ]),
-        image_data: TrustRc::new(vec![8; 1024]),
+        image_data: Arc::new(vec![8; 1024]),
     });
 
     sync_from(2);
