@@ -119,6 +119,7 @@ impl<T> TrustRc<T> {
 
 trait Dirty {
     fn sync(&self, from: usize, to: usize);
+    fn is_same_pointer(&self, usize) -> bool;
 }
 
 struct Tl<T> {
@@ -164,7 +165,7 @@ fn sync_to(to: usize) {
         let from = unsafe{ thread_index() };
         let mut d = d.borrow_mut();
 
-        // println!("SYNC {} -> {} : {}", from, to, d.len());
+        println!("SYNC {} -> {} : {}", from, to, d.len());
         d.iter().for_each(|it| it.sync(from, to));
         d.clear();
     });
@@ -175,16 +176,28 @@ fn sync_from(from: usize) {
         let to = unsafe{ thread_index() };
         let d = d.borrow_mut();
 
-        // println!("SYNC {} <- {} : {}", from, to, d.len());
+        println!("SYNC {} <- {} : {}", to, from, d.len());
         d.iter().for_each(|it| it.sync(from, to));
     });
 }
 
 impl<T: 'static + ManualCopy<T>> Tl<T> {
     fn to_mut(&self) -> &mut T {
+        // TODO Dev check if caller come from different places
+        // even in different sync calls, then should panic
         {
             let tmp = Box::new(self.clone());
             DIRTIES.with(|d| {
+                let ptr = tmp.cell.ptr;
+
+                for it in d.borrow().iter() {
+                    if it.is_same_pointer(ptr as usize) {
+                        return;
+                        // TODO Panic if can check correctly (use multiple dirty map)
+                        // panic!("Only allow one mutation each sync");
+                    }
+                }
+
                 d.borrow_mut().push(tmp);
             });
         }
@@ -196,6 +209,9 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
 impl<T: ManualCopy<T>> Dirty for Tl<T> {
     fn sync(&self, from: usize, to: usize) {
         self.cell.inner_manual_copy(from, to);
+    }
+    fn is_same_pointer(&self, other: usize) -> bool {
+        self.cell.ptr as usize == other
     }
 }
 
@@ -404,14 +420,17 @@ fn case03() {
     let handle = {
         let r = r.clone_to_thread();
         thread::Builder::new().name("1_test".into()).spawn(move || {
-            {
-                let tmp = &r.stack[0].buttons[0];
-                *tmp.txt.to_mut() = "Play".into();
-                *tmp.pos.to_mut() = (90, 60);
+            for _ in 1..10 {
+                {
+                    let tmp = &r.stack[0].buttons[0];
+                    *tmp.txt.to_mut() = "Play".into();
+                    *tmp.pos.to_mut() = (tmp.pos.0 - 2, tmp.pos.1 + 3);
+                }
+
+                sync_from(2);
             }
 
             thread::sleep(time::Duration::from_millis(10));
-            sync_from(2);
             sync_to(0);
         }).unwrap()
     };
