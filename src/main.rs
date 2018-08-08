@@ -245,7 +245,26 @@ fn case01() {
 fn case02() {
     let _a: Tl<usize> = Tl::new(3);
     let _b: Tl<String> = Tl::new("apple".into());
+    
+    let mut c: Tl<Vec<usize>> = Default::default();
+    c.push(22);
+    sync_to(1);
+    println!("{:?}", unsafe { &*c.cell.arr.get() });
+    
+    let handle = {
+        let mut c = c.clone();
+        thread::Builder::new().name("1_test".into()).spawn(move || {
+            c.push(33);
+            sync_to(0);
+        }).unwrap()
+    };
 
+    handle.join().unwrap();
+    println!("{:?}", unsafe { &*c.cell.arr.get() });
+}
+
+#[allow(dead_code)]
+fn case03() {
     #[derive(Clone)]
     struct SceneRoot {
         stack: Tl<Vec<Scene>>,
@@ -320,7 +339,9 @@ fn case02() {
 }
 
 fn main() {
-    case01();
-    println!();
+    // case01();
+    // println!();
     case02();
+    // println!();
+    // case03();
 }
