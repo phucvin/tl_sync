@@ -5,9 +5,9 @@ use tl_sync::*;
 use std::thread;
 
 fn main() {
-	init_dirties();
+    init_dirties();
 
-	let thing: Tl<String> = Tl::new("banana".into());
+    let thing: Tl<String> = Tl::new("banana".into());
     
     let thread = {
         let thing = thing.clone();
