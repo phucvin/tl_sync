@@ -1,3 +1,4 @@
+use std::cell::UnsafeCell;
 use super::*;
 
 pub struct TrustCell<T> {
