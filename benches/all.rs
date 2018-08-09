@@ -9,13 +9,13 @@ use rayon::prelude::*;
 use tl_sync::*;
 
 #[bench]
-fn case01(bencher: &mut Bencher) {
+fn sync_1mb_and_10k_100bytes(bencher: &mut Bencher) {
 	init_dirties();
 
 	let a: Tl<Vec<u8>> = Tl::new(vec![1; 1024 * 1024]);
     let mut b: Vec<Tl<Vec<u8>>> = vec![];
     for _i in 1..100 {
-        b.push(Tl::new(vec![1; 1024 * 100]));
+        b.push(Tl::new(vec![1; 1000 * 100]));
     }
 
     bencher.iter(|| {
