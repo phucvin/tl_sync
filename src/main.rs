@@ -1,9 +1,7 @@
 extern crate tl_sync;
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::thread;
-use tl_sync::{ Tl, Wrc, init_dirties, sync_from, sync_to };
+use tl_sync::*;
 
 #[allow(dead_code)]
 fn case04() {
@@ -54,131 +52,9 @@ fn test_closure() {
     tc.a = 10;
 }
 
-#[allow(dead_code)]
-fn test_listeners() {
-    #[derive(Default, Clone)]
-    struct Emitter {
-        l: Rc<RefCell<Vec<Box<Fn()>>>>,
-    }
-    impl Emitter {
-        fn add_listener(&self, f: Box<Fn()>) {
-            let mut l = self.l.borrow_mut();
-
-            l.push(f);
-        }
-
-        fn notify(&self) {
-            let l = self.l.borrow();
-
-            println!("notify to {} listeners", l.len());
-            l.iter().for_each(|it| it());
-        }
-    }
-
-    let a = std::cell::Cell::new(0);
-    let c1 = || {
-        println!("c1");
-    };
-    let c2 = move || {
-        println!("c2");
-        a.set(a.get() + 1);
-        println!("a = {}", a.get());
-    };
-    let e = Emitter::default();
-    e.add_listener(Box::new(c1));
-    e.notify();
-    e.add_listener(Box::new(c2));
-    e.notify();
-    e.notify();
-
-    println!();
-
-    struct Screen {
-        elements: Wrc<RefCell<Vec<Element>>>,
-        data: Wrc<RefCell<Vec<u8>>>,
-    }
-    #[derive(Default, Clone)]
-    struct Element {
-        on_click: Emitter,
-    }
-    impl Drop for Element {
-        fn drop(&mut self) {
-            println!("\t\tDROP Element");
-        }
-    }
-    impl Screen {
-        fn clone_weak(&self) -> Self {
-            Self {
-                elements: self.elements.clone_weak(),
-                data: self.data.clone_weak(),
-            }
-        }
-
-        fn setup(&self) {
-            let mut elements = self.elements.borrow_mut();
-
-            elements.push(Default::default());
-            let ref e = elements[0];
-
-            {
-                let this = self.clone_weak();
-
-                e.on_click.add_listener(Box::new(move || {
-                    this.layout();
-                }));
-            }
-
-            {
-                let this = self.clone_weak();
-
-                e.on_click.add_listener(Box::new(move || {
-                    this.animation();
-                }));
-            }
-        }
-
-        fn animation(&self) {
-            let elements = self.elements.borrow();
-            let data = self.data.borrow();
-
-            println!(
-                "animation for {} elements with data {:?}",
-                elements.len(),
-                data
-            );
-        }
-
-        fn layout(&self) {
-            let mut elements = self.elements.borrow_mut();
-            let mut data = self.data.borrow_mut();
-
-            elements.push(Default::default());
-            for it in data.iter_mut() {
-                *it *= 3;
-            }
-            println!("layout");
-        }
-
-        fn notify_all(&self) {
-            let elements = self.elements.borrow().clone();
-
-            elements.iter().for_each(|it| it.on_click.notify());
-        }
-    }
-
-    let screen = Screen {
-        elements: Wrc::new(RefCell::new(vec![])),
-        data: Wrc::new(RefCell::new(vec![1, 2, 3, 4, 5])),
-    };
-    screen.setup();
-    screen.notify_all();
-    println!("--");
-}
-
 fn main() {
     init_dirties();
 
     // case04();
-    // test_closure();
-    test_listeners();
+    test_closure();
 }
