@@ -4,13 +4,14 @@
 extern crate rayon;
 
 use rayon::prelude::*;
-use std::cell::UnsafeCell;
+use std::cell::{RefCell, UnsafeCell};
+use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
 use std::time;
-use std::collections::HashMap;
 
 const THREADS: usize = 3;
 
@@ -88,11 +89,12 @@ impl<T> Deref for Tl<T> {
 }
 
 static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
-static mut LISTENERS: Option<TrustCell<HashMap<Box<Dirty>, Vec<&Fn()>>>> = None;
+static mut LISTENERS: Option<TrustCell<HashMap<usize, Vec<&'static mut FnMut()>>>> = None;
 
 fn init_dirties() {
     unsafe {
         DIRTIES = Some(TrustCell::new(Default::default()));
+        LISTENERS = Some(TrustCell::new(Default::default()));
     }
 }
 
@@ -101,6 +103,15 @@ fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
         match DIRTIES {
             Some(ref d) => d,
             None => panic!("Uninitialized DIRTIES"),
+        }
+    }
+}
+
+fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<&'static mut FnMut()>>> {
+    unsafe {
+        match LISTENERS {
+            Some(ref l) => l,
+            None => panic!("Uninitialized LISTENERS"),
         }
     }
 }
@@ -164,9 +175,7 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         self.cell.arr.get() as usize == other
     }
 
-    fn notify(&self) {
-
-    }
+    fn notify(&self) {}
 }
 
 impl<T: Default + Clone + ManualCopy<T>> Default for Tl<T> {
@@ -467,35 +476,98 @@ fn test_closure() {
 
 #[allow(dead_code)]
 fn test_listeners() {
-    struct Emitter<'a> {
-        l: Vec<&'a mut FnMut()>,
+    #[derive(Default)]
+    struct Emitter {
+        l: Vec<Box<Fn()>>,
     }
-    impl<'a> Emitter<'a> {
-        fn add_listener(&mut self, f: &'a mut FnMut()) {
+    impl Emitter {
+        fn add_listener(&mut self, f: Box<Fn()>) {
             self.l.push(f);
         }
 
-        fn notify(&mut self) {
+        fn notify(&self) {
             println!("notify to {} listeners", self.l.len());
-            self.l.iter_mut().for_each(|it| it());
+            self.l.iter().for_each(|it| it());
         }
     }
 
-    let mut a = 0;
-    let mut c1 = || {
+    let a = std::cell::Cell::new(0);
+    let c1 = || {
         println!("c1");
     };
-    let mut c2 = || {
+    let c2 = move || {
         println!("c2");
-        a += 1;
-        println!("a = {}", a);
+        a.set(a.get() + 1);
+        println!("a = {}", a.get());
     };
     let mut e = Emitter { l: vec![] };
-    e.add_listener(&mut c1);
+    e.add_listener(Box::new(c1));
     e.notify();
-    e.add_listener(&mut c2);
+    e.add_listener(Box::new(c2));
     e.notify();
     e.notify();
+
+    println!();
+
+    #[derive(Clone)]
+    struct Screen {
+        elements: Rc<RefCell<Vec<Element>>>,
+    }
+    impl Drop for Screen {
+        fn drop(&mut self) {
+            println!("\t\tDROP Screen");
+
+            // Have to manually drop to avoid cycle references
+            match self.elements.try_borrow_mut() {
+                Ok(mut elements) => elements.clear(),
+                Err(_) => (),
+            }
+        }
+    }
+    #[derive(Default)]
+    struct Element {
+        on_click: Emitter,
+    }
+    impl Drop for Element {
+        fn drop(&mut self) {
+            println!("\t\tDROP Element");
+        }
+    }
+    impl Screen {
+        fn setup(&mut self) {
+            let mut elements = self.elements.borrow_mut();
+
+            elements.push(Default::default());
+
+            {
+                let this = self.clone_weak();
+                elements[0]
+                    .on_click
+                    .add_listener(Box::new(move || this.animation()));
+            }
+        }
+
+        fn animation(&self) {
+            println!("animation");
+        }
+
+        fn notify_all(&self) {
+            let elements = self.elements.borrow();
+
+            elements.iter().for_each(|it| it.on_click.notify());
+        }
+
+        fn clone_weak(&self) -> Screen {
+            let ret = self.clone();
+            ret
+        }
+    }
+
+    let mut screen = Screen {
+        elements: Rc::new(RefCell::new(vec![])),
+    };
+    screen.setup();
+    screen.notify_all();
 }
 
 fn main() {
@@ -508,7 +580,7 @@ fn main() {
     // case03();
     // println!();
     // case04();
-    
+
     // test_closure();
     test_listeners();
 }
