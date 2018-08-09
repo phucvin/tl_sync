@@ -540,7 +540,7 @@ fn test_listeners() {
             elements.push(Default::default());
 
             {
-                let this = self.clone_weak();
+                let this = self.clone();
                 elements[0]
                     .on_click
                     .add_listener(Box::new(move || this.animation()));
@@ -555,11 +555,6 @@ fn test_listeners() {
             let elements = self.elements.borrow();
 
             elements.iter().for_each(|it| it.on_click.notify());
-        }
-
-        fn clone_weak(&self) -> Screen {
-            let ret = self.clone();
-            ret
         }
     }
 
