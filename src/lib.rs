@@ -9,6 +9,12 @@ use std::thread;
 mod rc;
 pub use rc::*;
 
+mod cell;
+use cell::*;
+
+mod manual_copy;
+pub use manual_copy::*;
+
 const THREADS: usize = 3;
 
 thread_local! {
@@ -23,40 +29,6 @@ thread_local! {
 
 pub fn thread_index() -> usize {
     CACHED_THREAD_INDEX.with(|c| *c)
-}
-
-pub trait ManualCopy<T> {
-    fn copy_from(&mut self, &T);
-}
-
-struct TrustCell<T> {
-    arr: UnsafeCell<[T; THREADS]>,
-}
-
-unsafe impl<T> Sync for TrustCell<T> {}
-
-impl<T> TrustCell<T> {
-    fn new(arr: [T; THREADS]) -> Self {
-        Self {
-            arr: UnsafeCell::new(arr),
-        }
-    }
-
-    fn get(&self, i: usize) -> &T {
-        unsafe { &(&*self.arr.get())[i] }
-    }
-
-    fn to_mut(&self, i: usize) -> &mut T {
-        unsafe { &mut (&mut *self.arr.get())[i] }
-    }
-}
-
-impl<T: ManualCopy<T>> TrustCell<T> {
-    fn inner_manual_copy(&self, from: usize, to: usize) {
-        unsafe {
-            (&mut *self.arr.get())[to].copy_from(&(&*self.arr.get())[from]);
-        }
-    }
 }
 
 pub trait Dirty {
@@ -134,6 +106,7 @@ pub fn sync_from(from: usize) {
     });
 }
 
+// TODO Remove 'static here
 impl<T: 'static + ManualCopy<T>> Tl<T> {
     pub fn to_mut(&self) -> &mut T {
         // TODO Dev check if caller come from different places
@@ -192,56 +165,6 @@ impl<T: Clone> Tl<T> {
 
         Self {
             cell: Arc::new(TrustCell::new(a)),
-        }
-    }
-}
-
-impl ManualCopy<usize> for usize {
-    fn copy_from(&mut self, other: &usize) {
-        *self = *other;
-    }
-}
-
-impl ManualCopy<String> for String {
-    fn copy_from(&mut self, other: &String) {
-        self.clear();
-        self.push_str(other);
-    }
-}
-
-impl<T: Clone> ManualCopy<Option<T>> for Option<T> {
-    fn copy_from(&mut self, other: &Option<T>) {
-        *self = match *other {
-            None => None,
-            Some(ref v) => Some(v.clone()),
-        }
-    }
-}
-
-impl<T1: Clone, T2: Clone> ManualCopy<(T1, T2)> for (T1, T2) {
-    fn copy_from(&mut self, other: &(T1, T2)) {
-        // TODO If U: copy, try to use memcpy (=)
-        self.0 = other.0.clone();
-        self.1 = other.1.clone();
-    }
-}
-
-impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
-    fn copy_from(&mut self, other: &Vec<U>) {
-        // TODO If U: Copy, try to use memcpy (copy_from_slice)
-        let slen = self.len();
-        let olen = other.len();
-
-        if slen < olen {
-            for i in slen..olen {
-                self.push(other[i].clone());
-            }
-        } else if slen > olen {
-            self.truncate(olen)
-        }
-
-        for i in 0..(std::cmp::min(slen, olen)) {
-            self[i] = other[i].clone();
         }
     }
 }
