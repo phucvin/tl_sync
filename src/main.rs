@@ -512,6 +512,7 @@ fn test_listeners() {
     #[derive(Clone)]
     struct Screen {
         elements: Rc<RefCell<Vec<Element>>>,
+        data: Rc<RefCell<Vec<u8>>>,
     }
     impl Drop for Screen {
         fn drop(&mut self) {
@@ -523,6 +524,7 @@ fn test_listeners() {
 
             println!("\t\tDROP Screen");
             // Have to manually drop to avoid cycle references
+            // TODO Find a away
             elements.clear();
         }
     }
@@ -542,15 +544,38 @@ fn test_listeners() {
             elements.push(Default::default());
 
             {
-                let this = self.clone();
-                elements[0]
-                    .on_click
-                    .add_listener(Box::new(move || this.animation()));
+                let e = &mut elements[0];
+                let elements = self.elements.clone();
+                let data = self.data.clone();
+                e.on_click.add_listener(Box::new(move || {
+                    Screen::animation(&elements.borrow(), &data.borrow())
+                }));
+            }
+
+            {
+                let e = &mut elements[0];
+                let elements = self.elements.clone();
+                let data = self.data.clone();
+                e.on_click.add_listener(Box::new(move || {
+                    Screen::layout(&mut elements.borrow_mut(), &mut data.borrow_mut())
+                }));
             }
         }
 
-        fn animation(&self) {
-            println!("animation");
+        fn animation(elements: &Vec<Element>, data: &Vec<u8>) {
+            println!(
+                "animation for {} elements with data {:?}",
+                elements.len(),
+                data
+            );
+        }
+
+        fn layout(elements: &mut Vec<Element>, data: &mut Vec<u8>) {
+            elements.push(Default::default());
+            for it in data.iter_mut() {
+                *it *= 3;
+            }
+            println!("layout");
         }
 
         fn notify_all(&self) {
@@ -562,6 +587,7 @@ fn test_listeners() {
 
     let mut screen = Screen {
         elements: Rc::new(RefCell::new(vec![])),
+        data: Rc::new(RefCell::new(vec![1, 2, 3, 4, 5])),
     };
     screen.setup();
     screen.notify_all();
