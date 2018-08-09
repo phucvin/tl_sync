@@ -71,13 +71,13 @@ impl<T> Wrc<T> {
         }
     }
 
-    fn make_strong(&self) -> Rc<T> {
+    fn make_strong(&self) -> Wrc<T> {
         use Wrc::*;
         
         match *self {
-            Strong(ref s) => s.clone(),
+            Strong(ref s) => Strong(s.clone()),
             Weak(ref w) => match w.upgrade() {
-                Some(ref s) => s.clone(),
+                Some(ref s) => Strong(s.clone()),
                 None => panic!("Value already dropped"),
             },
         }
