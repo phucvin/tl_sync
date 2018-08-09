@@ -476,18 +476,22 @@ fn test_closure() {
 
 #[allow(dead_code)]
 fn test_listeners() {
-    #[derive(Default)]
+    #[derive(Default, Clone)]
     struct Emitter {
-        l: Vec<Box<Fn()>>,
+        l: Rc<RefCell<Vec<Box<Fn()>>>>,
     }
     impl Emitter {
         fn add_listener(&mut self, f: Box<Fn()>) {
-            self.l.push(f);
+            let mut l = self.l.borrow_mut();
+
+            l.push(f);
         }
 
         fn notify(&self) {
-            println!("notify to {} listeners", self.l.len());
-            self.l.iter().for_each(|it| it());
+            let l = self.l.borrow();
+
+            println!("notify to {} listeners", l.len());
+            l.iter().for_each(|it| it());
         }
     }
 
@@ -500,7 +504,7 @@ fn test_listeners() {
         a.set(a.get() + 1);
         println!("a = {}", a.get());
     };
-    let mut e = Emitter { l: vec![] };
+    let mut e = Emitter::default();
     e.add_listener(Box::new(c1));
     e.notify();
     e.add_listener(Box::new(c2));
@@ -514,21 +518,7 @@ fn test_listeners() {
         elements: Rc<RefCell<Vec<Element>>>,
         data: Rc<RefCell<Vec<u8>>>,
     }
-    impl Drop for Screen {
-        fn drop(&mut self) {
-            let mut elements;
-            match self.elements.try_borrow_mut() {
-                Ok(tmp) => elements = tmp,
-                Err(_) => return,
-            }
-
-            println!("\t\tDROP Screen");
-            // Have to manually drop to avoid cycle references
-            // TODO Find a away
-            elements.clear();
-        }
-    }
-    #[derive(Default)]
+    #[derive(Default, Clone)]
     struct Element {
         on_click: Emitter,
     }
@@ -545,19 +535,31 @@ fn test_listeners() {
 
             {
                 let e = &mut elements[0];
-                let elements = self.elements.clone();
-                let data = self.data.clone();
+                let elements = Rc::downgrade(&self.elements);
+                let data = Rc::downgrade(&self.data);
+
                 e.on_click.add_listener(Box::new(move || {
-                    Screen::animation(&elements.borrow(), &data.borrow())
+                    let elements = elements.upgrade().unwrap();
+                    let ref mut elements = elements.borrow_mut();
+                    let data = data.upgrade().unwrap();
+                    let ref mut data = data.borrow_mut();
+
+                    Screen::layout(elements, data);
                 }));
             }
 
             {
                 let e = &mut elements[0];
-                let elements = self.elements.clone();
-                let data = self.data.clone();
+                let elements = Rc::downgrade(&self.elements);
+                let data = Rc::downgrade(&self.data);
+
                 e.on_click.add_listener(Box::new(move || {
-                    Screen::layout(&mut elements.borrow_mut(), &mut data.borrow_mut())
+                    let elements = elements.upgrade().unwrap();
+                    let elements = elements.borrow();
+                    let data = data.upgrade().unwrap();
+                    let data = data.borrow();
+
+                    Screen::animation(&elements, &data);
                 }));
             }
         }
@@ -579,7 +581,7 @@ fn test_listeners() {
         }
 
         fn notify_all(&self) {
-            let elements = self.elements.borrow();
+            let elements = self.elements.borrow().clone();
 
             elements.iter().for_each(|it| it.on_click.notify());
         }
@@ -591,6 +593,7 @@ fn test_listeners() {
     };
     screen.setup();
     screen.notify_all();
+    println!("--");
 }
 
 fn main() {
