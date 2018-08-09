@@ -1,4 +1,3 @@
-extern crate rayon;
 extern crate tl_sync;
 
 use tl_sync::*;

@@ -1,29 +1,6 @@
 extern crate tl_sync;
 
-use std::thread;
 use tl_sync::*;
-
-#[allow(dead_code)]
-fn case04() {
-    let tmp = Tl::new(1);
-    let a = Tl::new((true, tmp));
-    println!("{}", *a.1);
-    {
-        let a = a.clone();
-        thread::Builder::new()
-            .name("1_test".into())
-            .spawn(move || {
-                // *(*a).1.to_mut() = 3;
-                a.to_mut().1 = Tl::new(3);
-                let _not_leak = Tl::new(100);
-                sync_from(2);
-                sync_to(0);
-            }).unwrap()
-            .join()
-            .unwrap();
-    }
-    println!("{}", *a.1);
-}
 
 #[allow(dead_code)]
 fn test_closure() {
@@ -55,6 +32,5 @@ fn test_closure() {
 fn main() {
     init_dirties();
 
-    // case04();
     test_closure();
 }
