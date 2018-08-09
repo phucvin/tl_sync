@@ -1,5 +1,11 @@
 #![feature(box_into_raw_non_null)]
 #![feature(const_fn)]
+#![feature(test)]
+
+#[cfg(test)]
+extern crate test;
+#[cfg(test)]
+extern crate rayon;
 
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
@@ -83,8 +89,10 @@ const THREADS: usize = 3;
 
 thread_local! {
     static CACHED_THREAD_INDEX: usize = match thread::current().name() {
-        Some("main") => 0,
-        Some(name) => 1 + (name.as_bytes()[0] - '1' as u8) as usize,
+        Some(name) => match 1 + (name.as_bytes()[0] - '1' as u8) as usize {
+            i if i < THREADS => i,
+            _ => 0,
+        },
         None => panic!("Invalid thread name to get index")
     };
 }
@@ -313,3 +321,6 @@ impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

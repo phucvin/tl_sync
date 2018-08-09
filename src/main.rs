@@ -1,12 +1,8 @@
-#![feature(box_into_raw_non_null)]
-#![feature(const_fn)]
-
 extern crate rayon;
 extern crate tl_sync;
 
 use rayon::prelude::*;
 use std::cell::RefCell;
-use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
