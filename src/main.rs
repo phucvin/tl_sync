@@ -18,6 +18,38 @@ enum Wrc<T> {
     Weak(Weak<T>),
 }
 
+impl<T> Clone for Wrc<T> {
+    fn clone(&self) -> Self {
+        use Wrc::*;
+        
+        match self {
+            Strong(ref s) => Strong(s.clone()),
+            Weak(ref w) => Weak(w.clone()),
+        }
+    }
+}
+
+impl<T> Deref for Wrc<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        use Wrc::*;
+        
+        match *self {
+            Strong(ref s) => s.deref(),
+            Weak(ref w) => match w.upgrade() {
+                Some(ref s) => {
+                    let tmp = s.deref();
+                    let tmp = tmp as *const T;
+                    
+                    unsafe { &*tmp }
+                },
+                None => panic!("Value already dropped"),
+            },
+        }
+    }
+}
+
 impl<T> Wrc<T> {
     fn new(value: T) -> Self {
         use Wrc::*;
@@ -30,29 +62,6 @@ impl<T> Wrc<T> {
         
         match *self {
             Strong(ref s) => Weak(Rc::downgrade(s)),
-            Weak(ref w) => Weak(w.clone()),
-        }
-    }
-
-    fn deref(&self) -> Rc<T> {
-        use Wrc::*;
-        
-        match *self {
-            Strong(ref s) => s.clone(),
-            Weak(ref w) => match w.upgrade() {
-                Some(ref s) => s.clone(),
-                None => panic!("Value already dropped"),
-            },
-        }
-    }
-}
-
-impl<T> Clone for Wrc<T> {
-    fn clone(&self) -> Self {
-        use Wrc::*;
-        
-        match self {
-            Strong(ref s) => Strong(s.clone()),
             Weak(ref w) => Weak(w.clone()),
         }
     }
