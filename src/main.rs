@@ -13,39 +13,31 @@ use std::sync::Arc;
 use std::thread;
 use std::time;
 
-enum WrcInner<T> {
+enum Wrc<T> {
     Strong(Rc<T>),
     Weak(Weak<T>),
 }
 
-struct Wrc<T> {
-    inner: WrcInner<T>,
-}
-
 impl<T> Wrc<T> {
     fn new(value: T) -> Self {
-        use WrcInner::*;
-
-        Self {
-            inner: Strong(Rc::new(value)),
-        }
+        use Wrc::*;
+        
+        Strong(Rc::new(value))
     }
 
     fn clone_weak(&self) -> Self {
-        use WrcInner::*;
+        use Wrc::*;
         
-        Self {
-            inner: match self.inner {
-                Strong(ref s) => Weak(Rc::downgrade(s)),
-                Weak(ref w) => Weak(w.clone()),
-            }
+        match *self {
+            Strong(ref s) => Weak(Rc::downgrade(s)),
+            Weak(ref w) => Weak(w.clone()),
         }
     }
 
-    fn get(&self) -> Rc<T> {
-        use WrcInner::*;
-
-        match self.inner {
+    fn deref(&self) -> Rc<T> {
+        use Wrc::*;
+        
+        match *self {
             Strong(ref s) => s.clone(),
             Weak(ref w) => match w.upgrade() {
                 Some(ref s) => s.clone(),
@@ -57,13 +49,11 @@ impl<T> Wrc<T> {
 
 impl<T> Clone for Wrc<T> {
     fn clone(&self) -> Self {
-        use WrcInner::*;
-
-        Self {
-            inner: match self.inner {
-                Strong(ref s) => Strong(s.clone()),
-                Weak(ref w) => Weak(w.clone()),
-            }
+        use Wrc::*;
+        
+        match self {
+            Strong(ref s) => Strong(s.clone()),
+            Weak(ref w) => Weak(w.clone()),
         }
     }
 }
@@ -536,7 +526,7 @@ fn test_listeners() {
         l: Rc<RefCell<Vec<Box<Fn()>>>>,
     }
     impl Emitter {
-        fn add_listener(&mut self, f: Box<Fn()>) {
+        fn add_listener(&self, f: Box<Fn()>) {
             let mut l = self.l.borrow_mut();
 
             l.push(f);
@@ -559,7 +549,7 @@ fn test_listeners() {
         a.set(a.get() + 1);
         println!("a = {}", a.get());
     };
-    let mut e = Emitter::default();
+    let e = Emitter::default();
     e.add_listener(Box::new(c1));
     e.notify();
     e.add_listener(Box::new(c2));
@@ -568,10 +558,9 @@ fn test_listeners() {
 
     println!();
 
-    #[derive(Clone)]
     struct Screen {
-        elements: Rc<RefCell<Vec<Element>>>,
-        data: Rc<RefCell<Vec<u8>>>,
+        elements: Wrc<RefCell<Vec<Element>>>,
+        data: Wrc<RefCell<Vec<u8>>>,
     }
     #[derive(Default, Clone)]
     struct Element {
@@ -583,43 +572,40 @@ fn test_listeners() {
         }
     }
     impl Screen {
-        fn setup(&mut self) {
-            let mut elements = self.elements.borrow_mut();
+        fn clone_weak(&self) -> Self {
+            Self {
+                elements: self.elements.clone_weak(),
+                data: self.data.clone_weak(),
+            }
+        }
+
+        fn setup(&self) {
+            let mut elements = self.elements.deref().borrow_mut();
 
             elements.push(Default::default());
+            let ref e = elements[0];
 
             {
-                let e = &mut elements[0];
-                let elements = Rc::downgrade(&self.elements);
-                let data = Rc::downgrade(&self.data);
+                let this = self.clone_weak();
 
                 e.on_click.add_listener(Box::new(move || {
-                    let elements = elements.upgrade().unwrap();
-                    let ref mut elements = elements.borrow_mut();
-                    let data = data.upgrade().unwrap();
-                    let ref mut data = data.borrow_mut();
-
-                    Screen::layout(elements, data);
+                    this.layout();
                 }));
             }
 
             {
-                let e = &mut elements[0];
-                let elements = Rc::downgrade(&self.elements);
-                let data = Rc::downgrade(&self.data);
+                let this = self.clone_weak();
 
                 e.on_click.add_listener(Box::new(move || {
-                    let elements = elements.upgrade().unwrap();
-                    let elements = elements.borrow();
-                    let data = data.upgrade().unwrap();
-                    let data = data.borrow();
-
-                    Screen::animation(&elements, &data);
+                    this.animation();
                 }));
             }
         }
 
-        fn animation(elements: &Vec<Element>, data: &Vec<u8>) {
+        fn animation(&self) {
+            let elements = self.elements.deref().borrow();
+            let data = self.data.deref().borrow();
+
             println!(
                 "animation for {} elements with data {:?}",
                 elements.len(),
@@ -627,7 +613,10 @@ fn test_listeners() {
             );
         }
 
-        fn layout(elements: &mut Vec<Element>, data: &mut Vec<u8>) {
+        fn layout(&self) {
+            let mut elements = self.elements.deref().borrow_mut();
+            let mut data = self.data.deref().borrow_mut();
+
             elements.push(Default::default());
             for it in data.iter_mut() {
                 *it *= 3;
@@ -636,15 +625,15 @@ fn test_listeners() {
         }
 
         fn notify_all(&self) {
-            let elements = self.elements.borrow().clone();
+            let elements = self.elements.deref().borrow().clone();
 
             elements.iter().for_each(|it| it.on_click.notify());
         }
     }
 
-    let mut screen = Screen {
-        elements: Rc::new(RefCell::new(vec![])),
-        data: Rc::new(RefCell::new(vec![1, 2, 3, 4, 5])),
+    let screen = Screen {
+        elements: Wrc::new(RefCell::new(vec![])),
+        data: Wrc::new(RefCell::new(vec![1, 2, 3, 4, 5])),
     };
     screen.setup();
     screen.notify_all();
