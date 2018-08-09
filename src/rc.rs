@@ -27,7 +27,7 @@ impl<T> Deref for Wrc<T> {
                     let tmp = s.deref();
                     let tmp = tmp as *const T;
 
-                    // FIXME Avoid unsafe
+                    // TODO Avoid unsafe
                     // Unsafe because right now rc for T is 2,
                     // But there after this fn returns, it is 1,
                     // So if rc for T drop to 0 in the future,

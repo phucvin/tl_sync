@@ -50,7 +50,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
             }
         }
 
-        self.cell.to_mut(THREADS - 1)
+        self.cell.to_mut(MUTATE_THREAD_INDEX)
     }
 }
 
