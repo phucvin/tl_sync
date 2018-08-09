@@ -1,55 +1,12 @@
-extern crate rayon;
 extern crate tl_sync;
 
-use rayon::prelude::*;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
 use std::time;
-use tl_sync::{ Tl, Wrc, Dirty, ManualCopy, init_dirties, sync_from, sync_to };
-
-#[allow(dead_code)]
-fn case01() {
-    let a: Tl<Vec<u8>> = Tl::new(vec![1; 1024 * 1024]);
-    let mut b: Vec<Tl<Vec<u8>>> = vec![];
-    for _i in 1..100 {
-        b.push(Tl::new(vec![1; 1024 * 100]));
-    }
-
-    let handle = {
-        let a = a.clone();
-        thread::Builder::new()
-            .name("1_test".into())
-            .spawn(move || {
-                println!("test a = {}", a[0]);
-                thread::sleep(time::Duration::from_millis(5));
-                println!("Done heavy in test");
-                a.to_mut()[0] = 2;
-                a.sync(2, 1);
-                println!("test a = {}", a[0]);
-            }).unwrap()
-    };
-
-    thread::sleep(time::Duration::from_millis(10));
-    println!("main a = {}", a[0]);
-    println!("Done heavy in main");
-    handle.join().unwrap();
-
-    {
-        let now = time::Instant::now();
-        a.sync(1, 0);
-        b.par_iter().for_each(|it| it.sync(1, 0));
-        let duration = now.elapsed();
-        println!(
-            "sync takes {}s + {}ms",
-            duration.as_secs(),
-            duration.subsec_millis()
-        );
-    }
-    println!("main a = {}", a[0]);
-}
+use tl_sync::{ Tl, Wrc, ManualCopy, init_dirties, sync_from, sync_to };
 
 #[allow(dead_code)]
 fn case02() {
