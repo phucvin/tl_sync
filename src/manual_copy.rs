@@ -1,3 +1,5 @@
+use std::cmp;
+
 pub trait ManualCopy<T> {
     fn copy_from(&mut self, &T);
 }
@@ -46,8 +48,8 @@ impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
             self.truncate(olen)
         }
 
-        let min = if slen < olen { slen } else { olen };
-        for i in 0..min {
+        let min_len = cmp::min(slen, olen);
+        for i in 0..min_len {
             self[i] = other[i].clone();
         }
     }
