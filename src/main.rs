@@ -70,6 +70,18 @@ impl<T> Wrc<T> {
             Weak(ref w) => Weak(w.clone()),
         }
     }
+
+    fn make_strong(&self) -> Rc<T> {
+        use Wrc::*;
+        
+        match *self {
+            Strong(ref s) => s.clone(),
+            Weak(ref w) => match w.upgrade() {
+                Some(ref s) => s.clone(),
+                None => panic!("Value already dropped"),
+            },
+        }
+    }
 }
 
 const THREADS: usize = 3;
@@ -656,22 +668,43 @@ fn test_listeners() {
 
 #[allow(dead_code)]
 fn test_invalid_memory_access_wrc() {
-    let a = Wrc::new(Box::new(5));
-    let b;
-    
-    b = a.clone_weak();
-
     {
-        let _c = a.clone();
+        let a = Wrc::new(Box::new(5));
+        let b = a.clone_weak();
+
+        {
+            let _c = a.clone();
+            println!("{:?}", *b);
+        }
         println!("{:?}", *b);
+
+        let i = b.deref();
+        std::mem::drop(a);
+
+        // This will not print 5, but a random number each run
+        println!("{:?}", i);
     }
-    println!("{:?}", *b);
 
-    let i = b.deref();
-    std::mem::drop(a);
+    println!();
 
-    // This will not print 5, but a random number each run
-    println!("{:?}", i);
+    // Use make_strong instead of deref
+    // to avoid invalid memory access as above
+    {
+        let a = Wrc::new(Box::new(6));
+        let b = a.clone_weak();
+
+        {
+            let _c = a.clone();
+            println!("{:?}", *b);
+        }
+        println!("{:?}", *b);
+
+        let strong = b.make_strong();
+        std::mem::drop(a);
+
+        // This will not print 5, but a random number each run
+        println!("{:?}", *strong);
+    }
 }
 
 fn main() {
