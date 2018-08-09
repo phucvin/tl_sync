@@ -1,7 +1,6 @@
 extern crate tl_sync;
 
 use std::cell::RefCell;
-use std::ops::Deref;
 use std::rc::Rc;
 use std::thread;
 use tl_sync::{ Tl, Wrc, init_dirties, sync_from, sync_to };
@@ -176,59 +175,10 @@ fn test_listeners() {
     println!("--");
 }
 
-#[allow(dead_code)]
-fn test_invalid_memory_access_wrc() {
-    {
-        let a = Wrc::new(Box::new(5));
-        let b = a.clone_weak();
-
-        {
-            let _c = a.clone();
-            println!("{:?}", *b);
-        }
-        println!("{:?}", *b);
-
-        let i = b.deref();
-        std::mem::drop(a);
-
-        // This will not print 5, but a random number each run
-        println!("{:?}", i);
-    }
-
-    println!();
-
-    // Use make_strong instead of deref
-    // to avoid invalid memory access as above
-    {
-        let a = Wrc::new(Box::new(6));
-        let b = a.clone_weak();
-
-        {
-            let _c = a.clone();
-            println!("{:?}", *b);
-        }
-        println!("{:?}", *b);
-
-        let strong = b.make_strong();
-        std::mem::drop(a);
-
-        // This will not print 5, but a random number each run
-        println!("{:?}", *strong);
-    }
-}
-
 fn main() {
     init_dirties();
 
-    // case01();
-    // println!();
-    // case02();
-    // println!();
-    // case03();
-    // println!();
     // case04();
-
     // test_closure();
-    // test_listeners();
-    test_invalid_memory_access_wrc();
+    test_listeners();
 }
