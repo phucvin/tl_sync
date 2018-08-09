@@ -1,7 +1,7 @@
 extern crate tl_sync;
 
-use tl_sync::*;
 use std::thread;
+use tl_sync::*;
 
 fn main() {
     init_dirties();
@@ -10,7 +10,7 @@ fn main() {
     let a = Tl::new((true, tmp));
 
     println!("{}", *a.1);
-    
+
     {
         let a = a.clone();
         thread::Builder::new()

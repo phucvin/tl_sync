@@ -105,7 +105,7 @@ fn main() {
         elements: Wrc::new(RefCell::new(vec![])),
         data: Wrc::new(RefCell::new(vec![1, 2, 3, 4, 5])),
     };
-    
+
     screen.setup();
     screen.notify_all();
     println!("--");

@@ -15,7 +15,7 @@ pub enum Wrc<T> {
 impl<T> Clone for Wrc<T> {
     fn clone(&self) -> Self {
         use Wrc::*;
-        
+
         match self {
             Strong(ref s) => Strong(s.clone()),
             Weak(ref w) => Weak(w.clone()),
@@ -28,7 +28,7 @@ impl<T> Deref for Wrc<T> {
 
     fn deref(&self) -> &T {
         use Wrc::*;
-        
+
         match *self {
             Strong(ref s) => s.deref(),
             Weak(ref w) => match w.upgrade() {
@@ -42,7 +42,7 @@ impl<T> Deref for Wrc<T> {
                     // So if rc for T drop to 0 in the future,
                     // this ref to T is point to invalid memory
                     unsafe { &*tmp }
-                },
+                }
                 None => panic!("Value already dropped"),
             },
         }
@@ -52,13 +52,13 @@ impl<T> Deref for Wrc<T> {
 impl<T> Wrc<T> {
     pub fn new(value: T) -> Self {
         use Wrc::*;
-        
+
         Strong(Rc::new(value))
     }
 
     pub fn clone_weak(&self) -> Self {
         use Wrc::*;
-        
+
         match *self {
             Strong(ref s) => Weak(Rc::downgrade(s)),
             Weak(ref w) => Weak(w.clone()),
@@ -67,7 +67,7 @@ impl<T> Wrc<T> {
 
     pub fn make_strong(&self) -> Wrc<T> {
         use Wrc::*;
-        
+
         match *self {
             Strong(ref s) => Strong(s.clone()),
             Weak(ref w) => match w.upgrade() {

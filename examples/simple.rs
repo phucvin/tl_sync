@@ -1,13 +1,13 @@
 extern crate tl_sync;
 
-use tl_sync::*;
 use std::thread;
+use tl_sync::*;
 
 fn main() {
     init_dirties();
 
     let thing: Tl<String> = Tl::new("banana".into());
-    
+
     let thread = {
         let thing = thing.clone();
 

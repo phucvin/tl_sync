@@ -3,7 +3,7 @@ extern crate tl_sync;
 use std::sync::Arc;
 use std::thread;
 use std::time;
-use tl_sync::{ Tl, ManualCopy, init_dirties, sync_from, sync_to };
+use tl_sync::*;
 
 #[derive(Clone)]
 struct SceneRoot {
@@ -45,7 +45,7 @@ fn main() {
     init_dirties();
 
     let r = Arc::new(SceneRoot::default());
-    
+
     r.stack.to_mut().push(Scene {
         title: Tl::new("Home".into()),
         buttons: Tl::new(vec![Button {
