@@ -8,6 +8,7 @@ use tl_sync::*;
 struct Emitter {
     l: Rc<RefCell<Vec<Box<Fn()>>>>,
 }
+
 impl Emitter {
     fn add_listener(&self, f: Box<Fn()>) {
         let mut l = self.l.borrow_mut();

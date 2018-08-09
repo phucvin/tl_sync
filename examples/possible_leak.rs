@@ -8,7 +8,9 @@ fn main() {
 
     let tmp = Tl::new(1);
     let a = Tl::new((true, tmp));
+
     println!("{}", *a.1);
+    
     {
         let a = a.clone();
         thread::Builder::new()
@@ -23,5 +25,6 @@ fn main() {
             .join()
             .unwrap();
     }
+
     println!("{}", *a.1);
 }

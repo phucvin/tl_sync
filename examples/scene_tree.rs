@@ -45,6 +45,7 @@ fn main() {
     init_dirties();
 
     let r = Arc::new(SceneRoot::default());
+    
     r.stack.to_mut().push(Scene {
         title: Tl::new("Home".into()),
         buttons: Tl::new(vec![Button {
