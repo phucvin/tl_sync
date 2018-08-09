@@ -1,11 +1,4 @@
 #![feature(box_into_raw_non_null)]
-#![feature(const_fn)]
-#![feature(test)]
-
-#[cfg(test)]
-extern crate test;
-#[cfg(test)]
-extern crate rayon;
 
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
@@ -112,7 +105,7 @@ struct TrustCell<T> {
 unsafe impl<T> Sync for TrustCell<T> {}
 
 impl<T> TrustCell<T> {
-    const fn new(arr: [T; THREADS]) -> Self {
+    fn new(arr: [T; THREADS]) -> Self {
         Self {
             arr: UnsafeCell::new(arr),
         }
@@ -321,6 +314,3 @@ impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
         }
     }
 }
-
-#[cfg(test)]
-mod tests;
