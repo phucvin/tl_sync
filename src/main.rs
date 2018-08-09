@@ -8,10 +8,35 @@ use std::cell::{RefCell, UnsafeCell};
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use std::thread;
 use std::time;
+
+enum WrcInner<T> {
+    Strong(Rc<T>),
+    Weak(Weak<T>),
+}
+
+struct Wrc<T> {
+    inner: WrcInner<T>,
+}
+
+impl<T> Deref for Wrc<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        use WrcInner::*;
+
+        match self.inner {
+            Strong(ref s) => s.deref(),
+            Weak(ref w) => match w.upgrade() {
+                Some(ref s) => s.deref(),
+                None => panic!("Value already dropped"),
+            },
+        }
+    }
+}
 
 const THREADS: usize = 3;
 
