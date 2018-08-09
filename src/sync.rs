@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::*;
+use std::collections::HashMap;
 
 pub trait Dirty {
     fn sync(&self, from: usize, to: usize);

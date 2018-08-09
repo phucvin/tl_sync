@@ -1,6 +1,6 @@
+use self::Wrc::*;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use self::Wrc::*;
 
 pub enum Wrc<T> {
     Strong(Rc<T>),

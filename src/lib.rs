@@ -1,7 +1,5 @@
 #![feature(box_into_raw_non_null)]
 
-use std::thread;
-
 mod rc;
 pub use rc::*;
 
@@ -20,7 +18,7 @@ pub use sync::*;
 const THREADS: usize = 3;
 
 thread_local! {
-    static CACHED_THREAD_INDEX: usize = match thread::current().name() {
+    static CACHED_THREAD_INDEX: usize = match std::thread::current().name() {
         Some(name) => match 1 + (name.as_bytes()[0] - '1' as u8) as usize {
             i if i < THREADS => i,
             _ => 0,

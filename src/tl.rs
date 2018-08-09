@@ -1,6 +1,6 @@
+use super::*;
 use std::ops::Deref;
 use std::sync::Arc;
-use super::*;
 
 pub struct Tl<T> {
     // TODO Retry TrustRc (simple Rc inside) when possible

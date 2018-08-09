@@ -1,5 +1,5 @@
-use std::cell::UnsafeCell;
 use super::*;
+use std::cell::UnsafeCell;
 
 pub struct TrustCell<T> {
     pub arr: UnsafeCell<[T; THREADS]>,
