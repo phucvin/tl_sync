@@ -22,18 +22,48 @@ struct Wrc<T> {
     inner: WrcInner<T>,
 }
 
-impl<T> Deref for Wrc<T> {
-    type Target = T;
+impl<T> Wrc<T> {
+    fn new(value: T) -> Self {
+        use WrcInner::*;
 
-    fn deref(&self) -> &T {
+        Self {
+            inner: Strong(Rc::new(value)),
+        }
+    }
+
+    fn clone_weak(&self) -> Self {
+        use WrcInner::*;
+        
+        Self {
+            inner: match self.inner {
+                Strong(ref s) => Weak(Rc::downgrade(s)),
+                Weak(ref w) => Weak(w.clone()),
+            }
+        }
+    }
+
+    fn get(&self) -> Rc<T> {
         use WrcInner::*;
 
         match self.inner {
-            Strong(ref s) => s.deref(),
+            Strong(ref s) => s.clone(),
             Weak(ref w) => match w.upgrade() {
-                Some(ref s) => s.deref(),
+                Some(ref s) => s.clone(),
                 None => panic!("Value already dropped"),
             },
+        }
+    }
+}
+
+impl<T> Clone for Wrc<T> {
+    fn clone(&self) -> Self {
+        use WrcInner::*;
+
+        Self {
+            inner: match self.inner {
+                Strong(ref s) => Strong(s.clone()),
+                Weak(ref w) => Weak(w.clone()),
+            }
         }
     }
 }
