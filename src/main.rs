@@ -594,7 +594,7 @@ fn test_listeners() {
         }
 
         fn setup(&self) {
-            let mut elements = self.elements.deref().borrow_mut();
+            let mut elements = self.elements.borrow_mut();
 
             elements.push(Default::default());
             let ref e = elements[0];
@@ -617,8 +617,8 @@ fn test_listeners() {
         }
 
         fn animation(&self) {
-            let elements = self.elements.deref().borrow();
-            let data = self.data.deref().borrow();
+            let elements = self.elements.borrow();
+            let data = self.data.borrow();
 
             println!(
                 "animation for {} elements with data {:?}",
@@ -628,8 +628,8 @@ fn test_listeners() {
         }
 
         fn layout(&self) {
-            let mut elements = self.elements.deref().borrow_mut();
-            let mut data = self.data.deref().borrow_mut();
+            let mut elements = self.elements.borrow_mut();
+            let mut data = self.data.borrow_mut();
 
             elements.push(Default::default());
             for it in data.iter_mut() {
@@ -639,7 +639,7 @@ fn test_listeners() {
         }
 
         fn notify_all(&self) {
-            let elements = self.elements.deref().borrow().clone();
+            let elements = self.elements.borrow().clone();
 
             elements.iter().for_each(|it| it.on_click.notify());
         }
