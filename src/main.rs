@@ -515,13 +515,15 @@ fn test_listeners() {
     }
     impl Drop for Screen {
         fn drop(&mut self) {
-            println!("\t\tDROP Screen");
-
-            // Have to manually drop to avoid cycle references
+            let mut elements;
             match self.elements.try_borrow_mut() {
-                Ok(mut elements) => elements.clear(),
-                Err(_) => (),
+                Ok(tmp) => elements = tmp,
+                Err(_) => return,
             }
+
+            println!("\t\tDROP Screen");
+            // Have to manually drop to avoid cycle references
+            elements.clear();
         }
     }
     #[derive(Default)]
