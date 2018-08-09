@@ -654,6 +654,26 @@ fn test_listeners() {
     println!("--");
 }
 
+#[allow(dead_code)]
+fn test_invalid_memory_access_wrc() {
+    let a = Wrc::new(Box::new(5));
+    let b;
+    
+    b = a.clone_weak();
+
+    {
+        let _c = a.clone();
+        println!("{:?}", *b);
+    }
+    println!("{:?}", *b);
+
+    let i = b.deref();
+    std::mem::drop(a);
+
+    // This will not print 5, but a random number each run
+    println!("{:?}", i);
+}
+
 fn main() {
     init_dirties();
 
@@ -666,5 +686,6 @@ fn main() {
     // case04();
 
     // test_closure();
-    test_listeners();
+    // test_listeners();
+    test_invalid_memory_access_wrc();
 }
