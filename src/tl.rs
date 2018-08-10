@@ -63,7 +63,16 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         self.cell.arr.get() as usize
     }
 
-    fn notify(&self) {}
+    fn register_listener(&self, f: Box<Fn()>) {
+        let l = get_listeners().to_mut(thread_index());
+        let ptr = self.get_ptr();
+        if !l.contains_key(&ptr) {
+            l.insert(ptr, vec![]);
+        }
+        
+        let l = l.get_mut(&ptr).unwrap();
+        l.push(f);
+    }
 }
 
 impl<T: Default + Clone + ManualCopy<T>> Default for Tl<T> {

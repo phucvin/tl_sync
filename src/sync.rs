@@ -4,7 +4,7 @@ use std::collections::HashMap;
 pub trait Dirty {
     fn sync(&self, from: usize, to: usize);
     fn get_ptr(&self) -> usize;
-    fn notify(&self);
+    fn register_listener(&self, Box<Fn()>);
 }
 
 static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
@@ -26,7 +26,7 @@ pub fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
     }
 }
 
-fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<Box<Fn()>>>> {
+pub fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<Box<Fn()>>>> {
     unsafe {
         match LISTENERS {
             Some(ref l) => l,
