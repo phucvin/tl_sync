@@ -1,5 +1,3 @@
-#![feature(mpsc_select)]
-
 extern crate tl_sync;
 
 use std::thread;
@@ -7,7 +5,8 @@ use std::time;
 use std::sync::mpsc;
 use tl_sync::*;
 
-const LOOPS: usize = 10;
+const LOOPS: usize = 5;
+const SLEEP: time::Duration = time::Duration::from_millis(1);
 
 #[derive(PartialEq)]
 enum SyncStatus {
@@ -45,7 +44,7 @@ fn main() {
                 .spawn(move || {
                     for _ in 0..LOOPS {
                         for _ in 0..2 {
-                            thread::sleep(time::Duration::from_millis(10));
+                            thread::sleep(SLEEP);
                             *root.to_mut() += 1;
 
                             sync_from(2);
@@ -67,7 +66,7 @@ fn main() {
 
             ui_thread.thread().unpark();
         }
-        thread::sleep(time::Duration::from_millis(10));
+        thread::sleep(SLEEP);
         ui_thread.thread().unpark();
 
         ui_thread.join().unwrap();
