@@ -5,7 +5,7 @@ use tl_sync::*;
 
 fn main() {
     init_dirties();
-
+{
     let thing: Tl<String> = Tl::new("banana".into());
 
     let thread = {
@@ -25,6 +25,6 @@ fn main() {
     thread.thread().unpark();
     thread.join().unwrap();
     println!("different now, thing = {}", *thing);
-
+}
     drop_dirties();
 }

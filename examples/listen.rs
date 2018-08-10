@@ -30,7 +30,6 @@ fn main() {
 
     thread.join().unwrap();
     notify();
-
 }
     drop_dirties();
 }

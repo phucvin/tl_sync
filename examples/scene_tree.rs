@@ -43,7 +43,7 @@ struct Button {
 
 fn main() {
     init_dirties();
-
+{
     let r = Arc::new(SceneRoot::default());
 
     r.stack.to_mut().push(Scene {
@@ -88,4 +88,6 @@ fn main() {
         "{}: {} @ {:?}",
         *r.stack[0].title, *r.stack[0].buttons[0].txt, *r.stack[0].buttons[0].pos
     );
+}
+    drop_dirties();
 }

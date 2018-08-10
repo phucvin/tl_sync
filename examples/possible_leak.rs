@@ -5,7 +5,7 @@ use tl_sync::*;
 
 fn main() {
     init_dirties();
-
+{
     let tmp = Tl::new(1);
     let a = Tl::new((true, tmp));
 
@@ -27,4 +27,6 @@ fn main() {
     }
 
     println!("{}", *a.1);
+}
+    drop_dirties();
 }
