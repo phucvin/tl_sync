@@ -18,7 +18,6 @@ pub struct ListenerHandleRef<'a> {
 
 impl<'a> Drop for ListenerHandleRef<'a> {
     fn drop(&mut self) {
-        println!("drop listener handle");
         let l = get_listeners().to_mut(thread_index());
         let mut is_zeroed = false;
 
@@ -28,7 +27,6 @@ impl<'a> Drop for ListenerHandleRef<'a> {
             for (i, it) in l.iter().enumerate() {
                 if ptr::eq(&it.0, self.handle) {
                     found = Some(i);
-                    println!("found");
                     break;
                 }
             }
