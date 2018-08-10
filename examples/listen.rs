@@ -8,13 +8,13 @@ fn main() {
 
     let thing: Tl<String> = Tl::new("banana".into());
 
-    thing.register_listener({
+    thing.register_listener(Box::new({
         let thing = thing.clone();
 
-        Box::new(move || {
+        move || {
             println!("thing changed to: {}", *thing);
-        })
-    });
+        }
+    }));
 
     let thread = {
         let thing = thing.clone();
