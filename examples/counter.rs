@@ -12,7 +12,7 @@ struct Counter {
 
 fn heavy_computation() {
     let mut tmp = vec![];
-    for _i in 1..100 {
+    for _i in 1..200 {
         tmp.push(Tl::new(vec![1; 10_000]));
     }
     for it in tmp.iter() {
@@ -45,7 +45,7 @@ fn main() {
             counter: Tl::new(0),
             loops: Tl::new(0),
         });
-        run(root, ui, compute);
+        run_sync(root, ui, compute);
     }
-    println!("\nFPS: {}", 1000 / ((now.elapsed().subsec_millis() + 1) / (LOOPS as u32)));
+    println!("\n{}s {}ms", now.elapsed().as_secs(), now.elapsed().subsec_millis());
 }
