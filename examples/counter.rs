@@ -1,55 +1,69 @@
 extern crate tl_sync;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tl_sync::*;
 
-const LOOPS: usize = 5;
-
+#[derive(Clone)]
 struct Counter {
+    phase: Tl<u8>,
     counter: Tl<usize>,
-    loops: Tl<usize>,
+    listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
 }
 
-fn heavy_computation() {
-    let mut tmp = vec![];
-    for _i in 1..100 {
-        tmp.push(Tl::new(vec![1; 10_000]));
+impl Counter {
+    fn setup_logic(&self) {
+        println!("setup logic");
+
+        self.push(self.counter.register_listener(Box::new({
+            let this = self.clone();
+            move || {
+                println!("compute thread | counter changed to: {}", *this.counter);
+            }
+        })));
     }
-    for it in tmp.iter() {
-        it.sync(2, 1);
+
+    fn setup_ui(&self) {
+        println!("setup ui");
+
+        self.push(self.counter.register_listener(Box::new({
+            let this = self.clone();
+            move || {
+                println!("ui thread     | counter changed to: {}", *this.counter);
+            }
+        })));
     }
-    for it in tmp.iter() {
-        it.sync(1, 0);
+    
+    fn push(&self, handle_ref: ListenerHandleRef) {
+        let mut v = self.listeners.lock().unwrap();
+        v.push(handle_ref);
     }
 }
 
 fn ui(root: Arc<Counter>) -> bool {
-    println!("ui thread      | counter: {}", *root.counter);
-    heavy_computation();
-    
-    *root.loops < LOOPS
+    if *root.phase == 0 {
+        root.setup_ui();
+    }
+
+    true
 }
 
 fn compute(root: Arc<Counter>) -> bool {
-    *root.counter.to_mut() += 1;
-    heavy_computation();
+    if *root.phase == 0 {
+        *root.phase.to_mut() = 1;
+        root.setup_logic();
+
+        *root.counter.to_mut() += 1;
+    }
     
-    *root.loops.to_mut() += 1;
-    *root.loops < LOOPS
+    true
 }
 
 fn main() {
-    let now = std::time::Instant::now();
-    {
-        let root: Arc<Counter> = Arc::new(Counter {
-            counter: Tl::new(0),
-            loops: Tl::new(0),
-        });
-        run(root, ui, compute);
-    }
-    let duration = now.elapsed();
-    let duration = duration.as_secs() * 1000 + duration.subsec_millis() as u64;
-    let fps = 1000 / (duration / 5);
-    println!("T   : {}ms", duration);
-    println!("FPS : {}", fps);
+    let root = Arc::new(Counter {
+        phase: Tl::new(0),
+        counter: Tl::new(0),
+        listeners: Default::default(),
+    });
+
+    run(root, ui, compute);
 }

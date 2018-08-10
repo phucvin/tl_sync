@@ -4,6 +4,12 @@ pub trait ManualCopy<T> {
     fn copy_from(&mut self, &T);
 }
 
+impl ManualCopy<u8> for u8 {
+    fn copy_from(&mut self, other: &u8) {
+        *self = *other;
+    }
+}
+
 impl ManualCopy<usize> for usize {
     fn copy_from(&mut self, other: &usize) {
         *self = *other;

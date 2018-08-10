@@ -12,11 +12,11 @@ pub struct ListenerHandle {
     pub ptr: usize,
 }
 
-pub struct ListenerHandleRef<'a> {
-    pub handle: &'a ListenerHandle,
+pub struct ListenerHandleRef {
+    pub handle: &'static ListenerHandle,
 }
 
-impl<'a> Drop for ListenerHandleRef<'a> {
+impl Drop for ListenerHandleRef {
     fn drop(&mut self) {
         let l = get_listeners().to_mut(thread_index());
         let mut is_zeroed = false;
@@ -54,23 +54,23 @@ pub fn init_dirties() {
 }
 
 pub fn drop_dirties() {
-    let d = get_dirties();
-    let l = get_listeners();
-
-    println!();
-    println!(
-        "DROP DIRTIES {} {} {}",
-        d.get(0).len(),
-        d.get(1).len(),
-        d.get(2).len()
-    );
-    println!(
-        "DROP LISTENERS {} {} {}",
-        l.get(0).len(),
-        l.get(1).len(),
-        l.get(2).len()
-    );
-    println!();
+    // let d = get_dirties();
+    // let l = get_listeners();
+    
+    // println!();
+    // println!(
+    //     "DROP DIRTIES {} {} {}",
+    //     d.get(0).len(),
+    //     d.get(1).len(),
+    //     d.get(2).len()
+    // );
+    // println!(
+    //     "DROP LISTENERS {} {} {}",
+    //     l.get(0).len(),
+    //     l.get(1).len(),
+    //     l.get(2).len()
+    // );
+    // println!();
 
     unsafe {
         DIRTIES = None;
@@ -100,7 +100,7 @@ pub fn sync_to(to: usize) {
     let from = thread_index();
     let df = get_dirties().to_mut(from);
 
-    println!("SYNC {} -> {} : {}", from, to, df.len());
+    // println!("SYNC {} -> {} : {}", from, to, df.len());
     df.iter().for_each(|it| it.1.sync(from, to));
     
     let dt = get_dirties().to_mut(to);
@@ -113,7 +113,7 @@ pub fn sync_from(from: usize) {
     let to = thread_index();
     let dt = get_dirties().to_mut(to);
 
-    println!("SYNC {} <- {} : {}", to, from, dt.len());
+    // println!("SYNC {} <- {} : {}", to, from, dt.len());
     dt.iter_mut().for_each(|it| {
         it.0 = 1;
         it.1.sync(from, to);
@@ -129,7 +129,7 @@ pub fn notify(d: Vec<(u8, Box<Dirty>)>) {
     let to = thread_index();
     let l = get_listeners().get(to);
 
-    println!("NOTIFY -> {} : {}", to, d.len());
+    // println!("NOTIFY -> {} : {}", to, d.len());
     d.iter().for_each(|it| {
         let ptr = it.1.get_ptr();
         if let Some(l) = l.get(&ptr) {

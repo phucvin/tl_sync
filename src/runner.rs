@@ -74,7 +74,7 @@ pub fn run<T: 'static + Send + Sync + Clone>(
     drop_dirties();
 }
 
-pub fn run_sync<T: 'static + Clone>(
+pub fn run_single<T: 'static + Clone>(
     root: T,
     ui: fn(T) -> bool,
     compute: fn(T) -> bool
