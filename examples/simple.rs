@@ -25,4 +25,6 @@ fn main() {
     thread.thread().unpark();
     thread.join().unwrap();
     println!("different now, thing = {}", *thing);
+
+    drop_dirties();
 }

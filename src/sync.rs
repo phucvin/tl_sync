@@ -17,6 +17,25 @@ pub fn init_dirties() {
     }
 }
 
+pub fn drop_dirties() {
+    let d = get_dirties();
+    let l = get_listeners();
+
+    println!();
+    println!("DROP DIRTIES {} {} {}",
+        d.get(0).len(), d.get(1).len(), d.get(2).len()
+    );
+    println!("DROP LISTENERS {} {} {}",
+        l.get(0).len(), l.get(1).len(), l.get(2).len()
+    );
+    println!();
+
+    unsafe {
+        DIRTIES = None;
+        LISTENERS = None;
+    }
+}
+
 pub fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
     unsafe {
         match DIRTIES {
@@ -42,6 +61,7 @@ pub fn sync_to(to: usize) {
     println!("SYNC {} -> {} : {}", from, to, d.len());
     d.iter().for_each(|it| it.1.sync(from, to));
     get_dirties().to_mut(to).append(d);
+    d.clear();
 }
 
 pub fn sync_from(from: usize) {
@@ -53,6 +73,7 @@ pub fn sync_from(from: usize) {
         it.0 = 1;
         it.1.sync(from, to);
     });
+    get_dirties().to_mut(from).clear();
 }
 
 pub fn notify() {
@@ -60,18 +81,12 @@ pub fn notify() {
     let d = get_dirties().to_mut(to);
     let l = get_listeners().get(to);
 
-    println!("NOTIFY {} : {}", to, d.len());
+    println!("NOTIFY -> {} : {}", to, d.len());
     d.iter().for_each(|it| {
         let ptr = it.1.get_ptr();
-        let l = l.get(&ptr).unwrap();
-        l.iter().for_each(|it| it());
+        if let Some(l) = l.get(&ptr) {
+            l.iter().for_each(|it| it());
+        }
     });
     d.clear();
-}
-
-pub fn drop_dirties() {
-    unsafe {
-        DIRTIES = None;
-        LISTENERS = None;
-    }
 }
