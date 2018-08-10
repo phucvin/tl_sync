@@ -12,8 +12,8 @@ enum SyncStatus {
 
 pub fn setup<T: 'static + Send + Sync + Clone>(
     root: T,
-    ui: fn(T),
-    compute: fn(T)
+    ui: fn(&T),
+    compute: fn(&T)
 ) -> (Box<Fn()>, Box<FnBox()>) {
     init_dirties();
 
@@ -30,7 +30,7 @@ pub fn setup<T: 'static + Send + Sync + Clone>(
             .name("1_compute".into())
             .spawn(move || {
                 loop {
-                    compute(root.clone());
+                    compute(&root);
                     sync_from(2);
 
                     tx.send(SyncStatus::Idle).unwrap();
@@ -50,7 +50,7 @@ pub fn setup<T: 'static + Send + Sync + Clone>(
         Box::new(move || {
             let prepared = prepare_notify();
             notify(prepared);
-            ui(root.clone());
+            ui(&root);
 
             match compute_rx.recv() {
                 Ok(SyncStatus::Idle) => (),

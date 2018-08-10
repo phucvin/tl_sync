@@ -81,13 +81,13 @@ impl Counter {
     }
 }
 
-fn ui(root: Arc<Counter>) {
+fn ui(root: &Arc<Counter>) {
     if *root.phase == 0 {
         root.setup_ui();
     }
 }
 
-fn logic(root: Arc<Counter>) {
+fn logic(root: &Arc<Counter>) {
     if *root.phase == 0 {
         root.setup_logic();
 
