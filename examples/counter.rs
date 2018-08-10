@@ -6,7 +6,7 @@ use tl_sync::*;
 
 const LOOPS: u32 = 5;
 
-fn heavy_computation() {/*
+fn heavy_computation() {
     let mut tmp = vec![];
     for _i in 1..10 {
         tmp.push(Tl::new(vec![1; 10_000]));
@@ -17,12 +17,13 @@ fn heavy_computation() {/*
     for it in tmp.iter() {
         it.sync(1, 0);
     }
-*/}
+}
 
 #[derive(PartialEq)]
 enum SyncStatus {
     Idle,
     JustSync,
+    JustPrepareNotify,
 }
 
 fn main() {
@@ -30,26 +31,33 @@ fn main() {
     let now = std::time::Instant::now();
     {
         let root = Tl::new(0);
+        let (ui_tx, ui_rx) = mpsc::channel();
         let (compute_tx, compute_rx) = mpsc::channel();
+        let compute_rtx: mpsc::Sender<()>;
+        let ui_rtx: mpsc::Sender<()>;
 
         let ui_thread = {
             let root = root.clone();
+            let (tx, rx) = mpsc::channel();
+            ui_rtx = tx;
+            let tx = ui_tx.clone();
 
             thread::Builder::new()
                 .name("main_ui".into())
                 .spawn(move || {
-                    let mut i = 2;
-                    while i > 0 {
-                        notify();
+                    for i in 0..(LOOPS + 1) {
+                        let tmp = prepare_notify();
+                        tx.send(SyncStatus::JustPrepareNotify).unwrap();
+                        rx.recv().unwrap();
+                        notify(tmp);
+
                         for _ in 0..3 {
                             heavy_computation();
                         }
                         println!("ui_thread      | counter: {}", *root);
 
-                        if *root != (2 * LOOPS) as usize {
-                            thread::park();
-                        } else {
-                            i -= 1;
+                        if i < LOOPS {
+                            rx.recv().unwrap();
                         }
                     }
                 }).unwrap()
@@ -57,6 +65,8 @@ fn main() {
 
         let compute_thread = {
             let root = root.clone();
+            let (tx, rx) = mpsc::channel();
+            compute_rtx = tx.clone();
             let tx = compute_tx.clone();
 
             thread::Builder::new()
@@ -72,7 +82,7 @@ fn main() {
                         println!("compute_thread | counter: {}", *root);
 
                         tx.send(SyncStatus::Idle).unwrap();
-                        thread::park();
+                        rx.recv().unwrap();
                         sync_to(0);
                         tx.send(SyncStatus::JustSync).unwrap();
                     }
@@ -80,12 +90,18 @@ fn main() {
         };
 
         for _ in 0..LOOPS {
+            assert!(ui_rx.recv().unwrap() == SyncStatus::JustPrepareNotify);
+            ui_rtx.send(()).unwrap();
+
             assert!(compute_rx.recv().unwrap() == SyncStatus::Idle);
-            compute_thread.thread().unpark();
+            compute_rtx.send(()).unwrap();
             assert!(compute_rx.recv().unwrap() == SyncStatus::JustSync);
 
-            ui_thread.thread().unpark();
+            ui_rtx.send(()).unwrap();
         }
+        
+        assert!(ui_rx.recv().unwrap() == SyncStatus::JustPrepareNotify);
+        ui_rtx.send(()).unwrap();
 
         ui_thread.join().unwrap();
         compute_thread.join().unwrap();

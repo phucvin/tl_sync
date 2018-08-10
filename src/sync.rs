@@ -1,7 +1,6 @@
 use super::*;
 use std::collections::HashMap;
 use std::ptr;
-use std::sync::Mutex;
 
 pub trait Dirty {
     fn sync(&self, from: usize, to: usize);
@@ -46,14 +45,11 @@ impl<'a> Drop for ListenerHandleRef<'a> {
 
 static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
 static mut LISTENERS: Option<TrustCell<HashMap<usize, Vec<(ListenerHandle, Box<Fn()>)>>>> = None;
-// TODO Avoid this copy lock if possible
-static mut COPY_LOCK: Option<Mutex<()>> = None;
 
 pub fn init_dirties() {
     unsafe {
         DIRTIES = Some(TrustCell::new(Default::default()));
         LISTENERS = Some(TrustCell::new(Default::default()));
-        COPY_LOCK = Some(Default::default());
     }
 }
 
@@ -100,15 +96,6 @@ pub fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<(ListenerHandle, 
     }
 }
 
-fn get_copy_locks<'a>() -> &'a Mutex<()> {
-    unsafe {
-        match COPY_LOCK {
-            Some(ref c) => c,
-            None => panic!("Uninitialized COPY_LOCKS"),
-        }
-    }
-}
-
 pub fn sync_to(to: usize) {
     let from = thread_index();
     let df = get_dirties().to_mut(from);
@@ -116,14 +103,9 @@ pub fn sync_to(to: usize) {
     println!("SYNC {} -> {} : {}", from, to, df.len());
     df.iter().for_each(|it| it.1.sync(from, to));
     
-    {
-        let _cl = get_copy_locks().lock().unwrap();
-        let dt = get_dirties().to_mut(to);
-        if dt.len() > 0 {
-            println!("Warning: should notify before sync {} -> {}", from, to);
-        }
-        dt.append(df);
-    }
+    let dt = get_dirties().to_mut(to);
+    assert!(dt.len() == 0, format!("Should notify before sync {} -> {}", from, to));
+    dt.append(df);
 }
 
 pub fn sync_from(from: usize) {
@@ -142,16 +124,9 @@ pub fn sync_from(from: usize) {
     df.clear();
 }
 
-pub fn notify() {
+pub fn notify(d: Vec<(u8, Box<Dirty>)>) {
     let to = thread_index();
     let l = get_listeners().get(to);
-    let d = {
-        let _cl = get_copy_locks().lock().unwrap();
-        let d = get_dirties().to_mut(to);
-        let mut tmp = vec![];
-        tmp.append(d);
-        tmp
-    };
 
     println!("NOTIFY -> {} : {}", to, d.len());
     d.iter().for_each(|it| {
@@ -160,4 +135,13 @@ pub fn notify() {
             l.iter().for_each(|it| it.1());
         }
     });
+}
+
+pub fn prepare_notify() -> Vec<(u8, Box<Dirty>)> {
+    let to = thread_index();
+    let d = get_dirties().to_mut(to);
+    let mut tmp = vec![];
+    
+    tmp.append(d);
+    tmp
 }

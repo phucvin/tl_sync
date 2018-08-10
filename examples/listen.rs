@@ -29,7 +29,7 @@ fn main() {
         };
 
         thread.join().unwrap();
-        notify();
+        notify(prepare_notify());
     }
     drop_dirties();
 }
