@@ -5,4 +5,6 @@ authors = ["phucvin <phucvin2@gmail.com>"]
 
 [dependencies]
 rayon = "1.0"
-iui = "0.3"
+
+[dependencies.iui]
+git = "https://github.com/th0rex/libui-rs"

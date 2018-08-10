@@ -21,8 +21,6 @@ impl Counter {
 
 impl UiSetup for Counter {
     fn setup_ui(&self) {
-        println!("setup ui");
-
         let mut win = Window::new(
             &self.iui, "Counter",
             400, 300,
@@ -41,8 +39,6 @@ impl UiSetup for Counter {
 
 impl ComputeSetup for Counter {
     fn setup_compute(&self) {
-        println!("setup compute");
-
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {

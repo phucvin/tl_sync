@@ -109,7 +109,7 @@ dependencies = [
 [[package]]
 name = "iui"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/th0rex/libui-rs#04c62b4ddfbc292cdbf51eb41439afaefcecfa98"
 dependencies = [
  "bitflags 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -220,7 +220,7 @@ dependencies = [
 name = "tl_sync"
 version = "0.1.0"
 dependencies = [
- "iui 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "iui 0.3.0 (git+https://github.com/th0rex/libui-rs)",
  "rayon 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -276,7 +276,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum either 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3be565ca5c557d7f59e7cfcf1844f9e3033650c929c6566f511e8005f205c1d0"
 "checksum failure 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7efb22686e4a466b1ec1a15c2898f91fa9cb340452496dca654032de20ff95b9"
 "checksum failure_derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "946d0e98a50d9831f5d589038d2ca7f8f455b1c21028c0db0e84116a12696426"
-"checksum iui 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1cdf33ae466c3e1000785d8e4933d92faa3b6c22424981f635532328dda51f57"
+"checksum iui 0.3.0 (git+https://github.com/th0rex/libui-rs)" = "<none>"
 "checksum lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ca488b89a5657b0a2ecd45b95609b3e848cf1755da332a0da46e2b2b1cb371a7"
 "checksum libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)" = "76e3a3ef172f1a0b9a9ff0dd1491ae5e6c948b94479a3021819ba7d860c8645d"
 "checksum memoffset 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0f9dc261e2b62d7a622bf416ea3c5245cdd5d9a7fcc428c0d06804dfce1775b3"
