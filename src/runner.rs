@@ -1,5 +1,6 @@
 use std::thread;
 use std::sync::mpsc;
+use std::boxed::FnBox;
 use super::*;
 
 #[derive(PartialEq)]
@@ -13,13 +14,13 @@ pub fn setup<T: 'static + Send + Sync + Clone>(
     root: T,
     ui: fn(T),
     compute: fn(T)
-) -> (Box<Fn()>, Box<Fn()>) {
+) -> (Box<Fn()>, Box<FnBox()>) {
     init_dirties();
 
     let (compute_tx, compute_rx) = mpsc::channel();
     let compute_rtx: mpsc::Sender<bool>;
 
-    let _compute_thread = {
+    let compute_thread = {
         let root = root.clone();
         let (tx, rx) = mpsc::channel();
         compute_rtx = tx.clone();
@@ -66,6 +67,7 @@ pub fn setup<T: 'static + Send + Sync + Clone>(
         }),
         Box::new(move || {
             compute_rtx2.send(false).unwrap();
+            compute_thread.join().unwrap();
 
             prepare_notify();
             drop_dirties();

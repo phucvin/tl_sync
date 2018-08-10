@@ -96,20 +96,24 @@ fn logic(root: Arc<Counter>) {
 }
 
 fn main() {
-    let iui = UI::init().unwrap();
-    let root = Arc::new(Counter {
-        phase: Tl::new(0),
-        counter: Tl::new(0),
-        listeners: Default::default(),
-        iui: Trust::new(iui.clone()),
-    });
-    let (tick, stop) = setup(root, ui, logic);
-    let mut ev = iui.event_loop();
-    
-    ev.on_tick(&iui, move || {
-        tick()
-    });
-    ev.run(&iui);
+    let stop = {
+        let iui = UI::init().unwrap();
+        let root = Arc::new(Counter {
+            phase: Tl::new(0),
+            counter: Tl::new(0),
+            listeners: Default::default(),
+            iui: Trust::new(iui.clone()),
+        });
+        let (tick, stop) = setup(root, ui, logic);
+        let mut ev = iui.event_loop();
+        
+        ev.on_tick(&iui, move || {
+            tick()
+        });
+        ev.run(&iui);
 
-    (move || stop())();
+        stop
+    };
+
+    stop();
 }
