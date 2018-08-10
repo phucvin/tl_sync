@@ -1,3 +1,5 @@
+#![feature(mpsc_select)]
+
 extern crate tl_sync;
 
 use std::thread;
@@ -17,21 +19,19 @@ fn main() {
     init_dirties();
     {
         let root = Tl::new(0);
-        let (ui_tx, ui_rx) = mpsc::channel();
         let (compute_tx, compute_rx) = mpsc::channel();
 
         let ui_thread = {
             let root = root.clone();
-            let tx = ui_tx.clone();
 
             thread::Builder::new()
                 .name("main_ui".into())
                 .spawn(move || {
                     for _ in 0..LOOPS {
-                        println!("ui_thread      | counter: {}", *root);
-
-                        tx.send(SyncStatus::Idle).unwrap();
                         thread::park();
+
+                        notify();
+                        println!("ui_thread      | counter: {}", *root);
                     }
                 }).unwrap()
         };
@@ -60,18 +60,16 @@ fn main() {
                 }).unwrap()
         };
 
-        loop {
+        for _ in 0..LOOPS {
             assert!(compute_rx.recv().unwrap() == SyncStatus::Idle);
-            assert!(ui_rx.recv().unwrap() == SyncStatus::Idle);
-            
             compute_thread.thread().unpark();
             assert!(compute_rx.recv().unwrap() == SyncStatus::JustSync);
 
             ui_thread.thread().unpark();
         }
 
-        // ui_thread.join().unwrap();
-        // compute_thread.join().unwrap();
+        ui_thread.join().unwrap();
+        compute_thread.join().unwrap();
     }
-    // drop_dirties();
+    drop_dirties();
 }
