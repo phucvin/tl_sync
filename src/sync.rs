@@ -43,6 +43,7 @@ impl Drop for ListenerHandleRef {
     }
 }
 
+// TODO Use context instead of static
 static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
 static mut LISTENERS: Option<TrustCell<HashMap<usize, Vec<(ListenerHandle, Box<Fn()>)>>>> = None;
 

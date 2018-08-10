@@ -23,7 +23,6 @@ impl<T> Deref for Tl<T> {
     }
 }
 
-// TODO Remove 'static here
 impl<T: 'static + ManualCopy<T>> Tl<T> {
     pub fn to_mut(&self) -> &mut T {
         // TODO Dev check if caller come from different places
