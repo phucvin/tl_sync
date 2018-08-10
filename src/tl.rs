@@ -7,6 +7,12 @@ pub struct Tl<T> {
     cell: Arc<TrustCell<T>>,
 }
 
+// impl<T> Drop for Tl<T> {
+//     fn drop(&mut self) {
+//         println!("Drop Tl with strong = {}", Arc::strong_count(&self.cell));
+//     }
+// }
+
 impl<T> Clone for Tl<T> {
     fn clone(&self) -> Self {
         Self {
