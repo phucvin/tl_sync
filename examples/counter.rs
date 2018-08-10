@@ -56,24 +56,22 @@ fn main() {
                         thread::park();
                         sync_to(0);
                         tx.send(SyncStatus::JustSync).unwrap();
-                        thread::park();
                     }
                 }).unwrap()
         };
 
         loop {
-            assert!(ui_rx.recv().unwrap() == SyncStatus::Idle);
             assert!(compute_rx.recv().unwrap() == SyncStatus::Idle);
+            assert!(ui_rx.recv().unwrap() == SyncStatus::Idle);
             
             compute_thread.thread().unpark();
             assert!(compute_rx.recv().unwrap() == SyncStatus::JustSync);
-            compute_thread.thread().unpark();
-            
+
             ui_thread.thread().unpark();
         }
 
         // ui_thread.join().unwrap();
         // compute_thread.join().unwrap();
     }
-    drop_dirties();
+    // drop_dirties();
 }
