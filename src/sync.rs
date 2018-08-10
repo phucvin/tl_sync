@@ -98,24 +98,28 @@ pub fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<(ListenerHandle, 
 
 pub fn sync_to(to: usize) {
     let from = thread_index();
-    let d = get_dirties().to_mut(from);
+    let df = get_dirties().to_mut(from);
 
-    println!("SYNC {} -> {} : {}", from, to, d.len());
-    d.iter().for_each(|it| it.1.sync(from, to));
-    get_dirties().to_mut(to).append(d);
-    d.clear();
+    println!("SYNC {} -> {} : {}", from, to, df.len());
+    df.iter().for_each(|it| it.1.sync(from, to));
+    
+    let dt = get_dirties().to_mut(to);
+    assert!(dt.len() == 0, "Should notify before sync");
+    dt.append(df);
 }
 
 pub fn sync_from(from: usize) {
     let to = thread_index();
-    let d = get_dirties().to_mut(to);
+    let dt = get_dirties().to_mut(to);
 
-    println!("SYNC {} <- {} : {}", to, from, d.len());
-    d.iter_mut().for_each(|it| {
+    println!("SYNC {} <- {} : {}", to, from, dt.len());
+    dt.iter_mut().for_each(|it| {
         it.0 = 1;
         it.1.sync(from, to);
     });
-    get_dirties().to_mut(from).clear();
+
+    let df = get_dirties().to_mut(from);
+    df.clear();
 }
 
 pub fn notify() {
