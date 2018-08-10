@@ -68,3 +68,10 @@ pub fn notify() {
     });
     d.clear();
 }
+
+pub fn clean_dirties() {
+    unsafe {
+        DIRTIES = None;
+        LISTENERS = None;
+    }
+}
