@@ -69,7 +69,7 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         self.cell.arr.get() as usize
     }
 
-    fn register_listener(&self, f: Box<Fn()>) -> &ListenerHandle {
+    fn register_listener(&self, f: Box<Fn()>) -> ListenerHandleRef {
         let l = get_listeners().to_mut(thread_index());
         let ptr = self.get_ptr();
         if !l.contains_key(&ptr) {
@@ -80,7 +80,9 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         let h = ListenerHandle { ptr };
         l.push((h, f));
 
-        &l[l.len() - 1].0
+        ListenerHandleRef {
+            handle: &l[l.len() - 1].0
+        }
     }
 }
 

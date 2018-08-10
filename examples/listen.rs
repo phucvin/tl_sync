@@ -5,10 +5,10 @@ use tl_sync::*;
 
 fn main() {
     init_dirties();
-
+{
     let thing: Tl<String> = Tl::new("banana".into());
 
-    let _ = thing.register_listener(Box::new({
+    let _must_live = thing.register_listener(Box::new({
         let thing = thing.clone();
 
         move || {
@@ -30,4 +30,7 @@ fn main() {
 
     thread.join().unwrap();
     notify();
+
+}
+    drop_dirties();
 }

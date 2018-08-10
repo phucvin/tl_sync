@@ -5,23 +5,27 @@ use std::ptr;
 pub trait Dirty {
     fn sync(&self, from: usize, to: usize);
     fn get_ptr(&self) -> usize;
-    fn register_listener(&self, Box<Fn()>) -> &ListenerHandle;
+    fn register_listener(&self, Box<Fn()>) -> ListenerHandleRef;
 }
 
 pub struct ListenerHandle {
     pub ptr: usize,
 }
 
-impl Drop for ListenerHandle {
+pub struct ListenerHandleRef<'a> {
+    pub handle: &'a ListenerHandle,
+}
+
+impl<'a> Drop for ListenerHandleRef<'a> {
     fn drop(&mut self) {
         println!("drop listener handle");
         let l = get_listeners().to_mut(thread_index());
 
-        if let Some(l) = l.get_mut(&self.ptr) {
+        if let Some(l) = l.get_mut(&self.handle.ptr) {
             let mut found = None;
             
             for (i, it) in l.iter().enumerate() {
-                if ptr::eq(&it.0, self) {
+                if ptr::eq(&it.0, self.handle) {
                     found = Some(i);
                     println!("found");
                     break;
