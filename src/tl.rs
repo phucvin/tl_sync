@@ -7,6 +7,12 @@ pub struct Tl<T> {
     cell: Arc<TrustCell<T>>,
 }
 
+impl<T> Drop for Tl<T> {
+    fn drop(&mut self) {
+        println!("Drop Tl with strong = {}", Arc::strong_count(&self.cell));
+    }
+}
+
 impl<T> Clone for Tl<T> {
     fn clone(&self) -> Self {
         Self {
@@ -63,7 +69,7 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         self.cell.arr.get() as usize
     }
 
-    fn register_listener(&self, f: Box<Fn()>) {
+    fn register_listener(&self, f: Box<Fn()>) -> &ListenerHandle {
         let l = get_listeners().to_mut(thread_index());
         let ptr = self.get_ptr();
         if !l.contains_key(&ptr) {
@@ -71,7 +77,10 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         }
         
         let l = l.get_mut(&ptr).unwrap();
-        l.push(f);
+        let h = ListenerHandle { ptr };
+        l.push((h, f));
+
+        &l[l.len() - 1].0
     }
 }
 

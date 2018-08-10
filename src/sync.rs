@@ -1,14 +1,42 @@
 use super::*;
 use std::collections::HashMap;
+use std::ptr;
 
 pub trait Dirty {
     fn sync(&self, from: usize, to: usize);
     fn get_ptr(&self) -> usize;
-    fn register_listener(&self, Box<Fn()>);
+    fn register_listener(&self, Box<Fn()>) -> &ListenerHandle;
+}
+
+pub struct ListenerHandle {
+    pub ptr: usize,
+}
+
+impl Drop for ListenerHandle {
+    fn drop(&mut self) {
+        println!("drop listener handle");
+        let l = get_listeners().to_mut(thread_index());
+
+        if let Some(l) = l.get_mut(&self.ptr) {
+            let mut found = None;
+            
+            for (i, it) in l.iter().enumerate() {
+                if ptr::eq(&it.0, self) {
+                    found = Some(i);
+                    println!("found");
+                    break;
+                }
+            }
+
+            if let Some(i) = found {
+                l.remove(i);
+            }
+        }
+    }
 }
 
 static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
-static mut LISTENERS: Option<TrustCell<HashMap<usize, Vec<Box<Fn()>>>>> = None;
+static mut LISTENERS: Option<TrustCell<HashMap<usize, Vec<(ListenerHandle, Box<Fn()>)>>>> = None;
 
 pub fn init_dirties() {
     unsafe {
@@ -45,7 +73,7 @@ pub fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
     }
 }
 
-pub fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<Box<Fn()>>>> {
+pub fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<(ListenerHandle, Box<Fn()>)>>> {
     unsafe {
         match LISTENERS {
             Some(ref l) => l,
@@ -85,7 +113,7 @@ pub fn notify() {
     d.iter().for_each(|it| {
         let ptr = it.1.get_ptr();
         if let Some(l) = l.get(&ptr) {
-            l.iter().for_each(|it| it());
+            l.iter().for_each(|it| it.1());
         }
     });
     d.clear();

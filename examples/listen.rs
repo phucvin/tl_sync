@@ -8,7 +8,7 @@ fn main() {
 
     let thing: Tl<String> = Tl::new("banana".into());
 
-    thing.register_listener(Box::new({
+    let _ = thing.register_listener(Box::new({
         let thing = thing.clone();
 
         move || {
@@ -30,6 +30,4 @@ fn main() {
 
     thread.join().unwrap();
     notify();
-
-    drop_dirties();
 }
