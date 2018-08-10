@@ -4,12 +4,20 @@ use std::thread;
 use std::sync::mpsc;
 use tl_sync::*;
 
-const LOOPS: usize = 5;
+const LOOPS: u32 = 5;
 
-fn heavy_computation() {
-    let tmp = Tl::new(vec![1; 1024 * 1024 * 10]);
-    tmp.sync(0, 1);
-}
+fn heavy_computation() {/*
+    let mut tmp = vec![];
+    for _i in 1..10 {
+        tmp.push(Tl::new(vec![1; 10_000]));
+    }
+    for it in tmp.iter() {
+        it.sync(2, 1);
+    }
+    for it in tmp.iter() {
+        it.sync(1, 0);
+    }
+*/}
 
 #[derive(PartialEq)]
 enum SyncStatus {
@@ -19,6 +27,7 @@ enum SyncStatus {
 
 fn main() {
     init_dirties();
+    let now = std::time::Instant::now();
     {
         let root = Tl::new(0);
         let (compute_tx, compute_rx) = mpsc::channel();
@@ -29,15 +38,18 @@ fn main() {
             thread::Builder::new()
                 .name("main_ui".into())
                 .spawn(move || {
-                    for i in 0..(LOOPS + 1) {
+                    let mut i = 2;
+                    while i > 0 {
                         notify();
-                        println!("ui_thread      | counter: {}", *root);
-
-                        for _ in 0..2 {
+                        for _ in 0..3 {
                             heavy_computation();
                         }
-                        if i < LOOPS {
+                        println!("ui_thread      | counter: {}", *root);
+
+                        if *root != (2 * LOOPS) as usize {
                             thread::park();
+                        } else {
+                            i -= 1;
                         }
                     }
                 }).unwrap()
@@ -78,5 +90,6 @@ fn main() {
         ui_thread.join().unwrap();
         compute_thread.join().unwrap();
     }
+    println!("\nFPS: {}", 1000 / (now.elapsed().subsec_millis() / LOOPS));
     drop_dirties();
 }
