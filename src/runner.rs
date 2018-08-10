@@ -38,6 +38,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                 root.setup_compute();
                 loop {
                     sync_from(2);
+                    // TODO Notify for compute too
 
                     tx.send(SyncStatus::Idle).unwrap();
                     match rx.recv() {

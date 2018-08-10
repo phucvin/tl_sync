@@ -1,3 +1,5 @@
+// #![windows_subsystem="windows"]
+
 extern crate iui;
 extern crate tl_sync;
 
