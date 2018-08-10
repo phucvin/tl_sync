@@ -7,7 +7,7 @@ use std::time;
 use std::sync::mpsc;
 use tl_sync::*;
 
-const LOOPS: usize = 2;
+const LOOPS: usize = 10;
 
 #[derive(PartialEq)]
 enum SyncStatus {
@@ -27,11 +27,11 @@ fn main() {
             thread::Builder::new()
                 .name("main_ui".into())
                 .spawn(move || {
-                    for _ in 0..LOOPS {
-                        thread::park();
-
+                    for _ in 0..(LOOPS + 1) {
                         notify();
                         println!("ui_thread      | counter: {}", *root);
+
+                        thread::park();
                     }
                 }).unwrap()
         };
@@ -45,7 +45,7 @@ fn main() {
                 .spawn(move || {
                     for _ in 0..LOOPS {
                         for _ in 0..2 {
-                            thread::sleep(time::Duration::from_millis(100));
+                            thread::sleep(time::Duration::from_millis(10));
                             *root.to_mut() += 1;
 
                             sync_from(2);
@@ -67,6 +67,8 @@ fn main() {
 
             ui_thread.thread().unpark();
         }
+        thread::sleep(time::Duration::from_millis(10));
+        ui_thread.thread().unpark();
 
         ui_thread.join().unwrap();
         compute_thread.join().unwrap();
