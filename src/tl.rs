@@ -36,7 +36,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
 
             let mut is_unique = true;
             for it in d.iter() {
-                if it.1.is_same_pointer(ptr as usize) {
+                if it.1.get_ptr() == ptr as usize {
                     if it.0 > 1 {
                         panic!("Only allow one mutation each sync");
                     }
@@ -59,8 +59,8 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         self.cell.inner_manual_copy(from, to);
     }
 
-    fn is_same_pointer(&self, other: usize) -> bool {
-        self.cell.arr.get() as usize == other
+    fn get_ptr(&self) -> usize {
+        self.cell.arr.get() as usize
     }
 
     fn notify(&self) {}

@@ -3,12 +3,12 @@ use std::collections::HashMap;
 
 pub trait Dirty {
     fn sync(&self, from: usize, to: usize);
-    fn is_same_pointer(&self, usize) -> bool;
+    fn get_ptr(&self) -> usize;
     fn notify(&self);
 }
 
 static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
-static mut LISTENERS: Option<TrustCell<HashMap<usize, Vec<&'static mut FnMut()>>>> = None;
+static mut LISTENERS: Option<TrustCell<HashMap<usize, Vec<Box<Fn()>>>>> = None;
 
 pub fn init_dirties() {
     unsafe {
@@ -26,7 +26,7 @@ pub fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
     }
 }
 
-fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<&'static mut FnMut()>>> {
+fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<Box<Fn()>>>> {
     unsafe {
         match LISTENERS {
             Some(ref l) => l,
@@ -41,7 +41,7 @@ pub fn sync_to(to: usize) {
 
     println!("SYNC {} -> {} : {}", from, to, d.len());
     d.iter().for_each(|it| it.1.sync(from, to));
-    d.clear();
+    get_dirties().to_mut(to).append(d);
 }
 
 pub fn sync_from(from: usize) {
@@ -53,4 +53,18 @@ pub fn sync_from(from: usize) {
         it.0 = 1;
         it.1.sync(from, to);
     });
+}
+
+pub fn notify() {
+    let to = thread_index();
+    let d = get_dirties().to_mut(to);
+    let l = get_listeners().get(to);
+
+    println!("NOTIFY {} : {}", to, d.len());
+    d.iter().for_each(|it| {
+        let ptr = it.1.get_ptr();
+        let l = l.get(&ptr).unwrap();
+        l.iter().for_each(|it| it());
+    });
+    d.clear();
 }
