@@ -6,7 +6,6 @@ use super::*;
 enum SyncStatus {
     Idle,
     JustSync,
-    JustPrepareNotify,
     Quit,
 }
 
@@ -17,38 +16,8 @@ pub fn run<T: 'static + Send + Sync + Clone>(
 ) {
     init_dirties();
     {
-        let (ui_tx, ui_rx) = mpsc::channel();
         let (compute_tx, compute_rx) = mpsc::channel();
         let compute_rtx: mpsc::Sender<()>;
-        let ui_rtx: mpsc::Sender<()>;
-
-        let ui_thread = {
-            let root = root.clone();
-            let (tx, rx) = mpsc::channel();
-            ui_rtx = tx;
-            let tx = ui_tx.clone();
-
-            thread::Builder::new()
-                .name("main_ui".into())
-                .spawn(move || {
-                    loop {
-                        let tmp = prepare_notify();
-                        tx.send(SyncStatus::JustPrepareNotify).unwrap();
-                        rx.recv().unwrap();
-                        notify(tmp);
-
-                        let ret = ui(root.clone());
-
-                        tx.send(SyncStatus::Idle).unwrap();
-                        
-                        if ret == false {
-                            prepare_notify();
-                            tx.send(SyncStatus::Quit).unwrap();
-                            break;
-                        }
-                    }
-                }).unwrap()
-        };
 
         let compute_thread = {
             let root = root.clone();
@@ -77,19 +46,11 @@ pub fn run<T: 'static + Send + Sync + Clone>(
         };
 
         loop {
-            match ui_rx.recv() {
-                Ok(SyncStatus::JustPrepareNotify) => (),
-                Ok(SyncStatus::Quit) => break,
-                _ => break,
-            }
-            ui_rtx.send(()).unwrap();
+            let prepared = prepare_notify();
+            notify(prepared);
+            let ret = ui(root.clone());
 
             match compute_rx.recv() {
-                Ok(SyncStatus::Idle) => (),
-                Ok(SyncStatus::Quit) => break,
-                _ => break,
-            }
-            match ui_rx.recv() {
                 Ok(SyncStatus::Idle) => (),
                 Ok(SyncStatus::Quit) => break,
                 _ => break,
@@ -101,9 +62,13 @@ pub fn run<T: 'static + Send + Sync + Clone>(
                 Ok(SyncStatus::Quit) => break,
                 _ => break,
             }
+            
+            if ret == false {
+                prepare_notify();
+                break;
+            }
         }
 
-        ui_thread.join().unwrap();
         compute_thread.join().unwrap();
     }
     drop_dirties();
