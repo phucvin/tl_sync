@@ -7,24 +7,19 @@ use tl_sync::*;
 
 #[derive(Clone)]
 struct Counter {
-    phase: Tl<u8>,
-    counter: Tl<usize>,
-    listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
     iui: Trust<UI>,
+    listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
+    counter: Tl<usize>,
 }
 
 impl Counter {
-    fn setup_logic(&self) {
-        println!("setup logic");
-
-        self.push(self.counter.register_listener(Box::new({
-            let this = self.clone();
-            move || {
-                println!("compute thread | counter changed to: {}", *this.counter);
-            }
-        })));
+    fn push(&self, handle_ref: ListenerHandleRef) {
+        let mut v = self.listeners.lock().unwrap();
+        v.push(handle_ref);
     }
+}
 
+impl UiSetup for Counter {
     fn setup_ui(&self) {
         println!("setup ui");
 
@@ -42,37 +37,30 @@ impl Counter {
             }
         })));
     }
-    
-    fn push(&self, handle_ref: ListenerHandleRef) {
-        let mut v = self.listeners.lock().unwrap();
-        v.push(handle_ref);
-    }
 }
 
-fn ui(root: &Arc<Counter>) {
-    if *root.phase == 0 {
-        root.setup_ui();
-    }
-}
+impl ComputeSetup for Counter {
+    fn setup_compute(&self) {
+        println!("setup compute");
 
-fn logic(root: &Arc<Counter>) {
-    if *root.phase == 0 {
-        root.setup_logic();
-
-        *root.phase.to_mut() = 1;
+        self.push(self.counter.register_listener(Box::new({
+            let this = self.clone();
+            move || {
+                println!("compute thread | counter changed to: {}", *this.counter);
+            }
+        })));
     }
 }
 
 fn main() {
     let stop = {
         let iui = UI::init().unwrap();
-        let root = Arc::new(Counter {
-            phase: Tl::new(0),
-            counter: Tl::new(0),
-            listeners: Default::default(),
+        let root = Counter {
             iui: Trust::new(iui.clone()),
-        });
-        let (tick, stop) = setup(root, ui, logic);
+            listeners: Default::default(),
+            counter: Tl::new(0),
+        };
+        let (tick, stop) = setup(root);
         let mut ev = iui.event_loop();
         
         ev.on_tick(&iui, move || {

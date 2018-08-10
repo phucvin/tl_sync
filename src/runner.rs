@@ -10,10 +10,16 @@ enum SyncStatus {
     Quit,
 }
 
-pub fn setup<T: 'static + Send + Sync + Clone>(
+pub trait UiSetup {
+    fn setup_ui(&self);
+}
+
+pub trait ComputeSetup {
+    fn setup_compute(&self);
+}
+
+pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     root: T,
-    ui: fn(&T),
-    compute: fn(&T)
 ) -> (Box<Fn()>, Box<FnBox()>) {
     init_dirties();
 
@@ -29,8 +35,8 @@ pub fn setup<T: 'static + Send + Sync + Clone>(
         thread::Builder::new()
             .name("1_compute".into())
             .spawn(move || {
+                root.setup_compute();
                 loop {
-                    compute(&root);
                     sync_from(2);
 
                     tx.send(SyncStatus::Idle).unwrap();
@@ -44,35 +50,39 @@ pub fn setup<T: 'static + Send + Sync + Clone>(
             }).unwrap()
     };
 
-    let compute_rtx2 = compute_rtx.clone();
+    root.setup_ui();
 
-    (
-        Box::new(move || {
-            let prepared = prepare_notify();
-            notify(prepared);
-            ui(&root);
+    let stop = Box::new({
+        let compute_rtx = compute_rtx.clone();
 
-            match compute_rx.recv() {
-                Ok(SyncStatus::Idle) => (),
-                Ok(SyncStatus::Quit) => return,
-                _ => return,
-            }
-
-            compute_rtx.send(true).unwrap();
-            match compute_rx.recv() {
-                Ok(SyncStatus::JustSync) => (),
-                Ok(SyncStatus::Quit) => return,
-                _ => return,
-            }
-        }),
-        Box::new(move || {
-            compute_rtx2.send(false).unwrap();
+        move || {
+            compute_rtx.send(false).unwrap();
             compute_thread.join().unwrap();
 
             prepare_notify();
             drop_dirties();
-        })
-    )
+        }
+    });
+
+    let tick = Box::new(move || {
+        let prepared = prepare_notify();
+        notify(prepared);
+
+        match compute_rx.recv() {
+            Ok(SyncStatus::Idle) => (),
+            Ok(SyncStatus::Quit) => return,
+            _ => return,
+        }
+
+        compute_rtx.send(true).unwrap();
+        match compute_rx.recv() {
+            Ok(SyncStatus::JustSync) => (),
+            Ok(SyncStatus::Quit) => return,
+            _ => return,
+        }
+    });
+
+    (tick, stop)
 }
 
 pub fn run<T: 'static + Send + Sync + Clone>(
