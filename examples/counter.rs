@@ -26,6 +26,7 @@ fn heavy_computation() {
 fn ui(root: Arc<Counter>) -> bool {
     println!("ui thread      | counter: {}", *root.counter);
     heavy_computation();
+    heavy_computation();
     
     *root.loops < LOOPS
 }

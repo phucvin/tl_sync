@@ -104,6 +104,7 @@ pub fn sync_to(to: usize) {
     df.iter().for_each(|it| it.1.sync(from, to));
     
     let dt = get_dirties().to_mut(to);
+    // TODO Consider allow remain dirties in case ui thread take too long
     assert!(dt.len() == 0, format!("Should notify before sync {} -> {}", from, to));
     dt.append(df);
 }
