@@ -3,39 +3,7 @@ extern crate tl_sync;
 
 use iui::prelude::*;
 use std::sync::{Arc, Mutex};
-use std::ops::Deref;
 use tl_sync::*;
-
-struct Trust<T> {
-    inner: T,
-}
-
-unsafe impl<T> Send for Trust<T> {}
-unsafe impl<T> Sync for Trust<T> {}
-
-impl<T> Deref for Trust<T> {
-    type Target = T;
-    
-    fn deref(&self) -> &T {
-        &self.inner
-    }
-}
-
-impl<T: Clone> Clone for Trust<T> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone()
-        }
-    }
-}
-
-impl<T> Trust<T> {
-    fn new(inner: T) -> Self {
-        Self {
-            inner,
-        }
-    }
-}
 
 #[derive(Clone)]
 struct Counter {

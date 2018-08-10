@@ -4,6 +4,9 @@
 mod rc;
 pub use rc::*;
 
+mod trust;
+pub use trust::*;
+
 mod cell;
 use cell::*;
 
