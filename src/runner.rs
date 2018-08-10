@@ -73,3 +73,26 @@ pub fn run<T: 'static + Send + Sync + Clone>(
     }
     drop_dirties();
 }
+
+pub fn run_sync<T: 'static + Clone>(
+    root: T,
+    ui: fn(T) -> bool,
+    compute: fn(T) -> bool
+) {
+    init_dirties();
+    {
+        loop {
+            notify(prepare_notify());
+            get_dirties().to_mut(0).clear();
+
+            let ui_ret = ui(root.clone());
+            let compute_ret = compute(root.clone());
+            sync_from(2);
+
+            if ui_ret == false || compute_ret == false {
+                break;
+            }
+        }
+    }
+    drop_dirties();
+}
