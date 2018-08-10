@@ -69,7 +69,7 @@ pub fn notify() {
     d.clear();
 }
 
-pub fn clean_dirties() {
+pub fn drop_dirties() {
     unsafe {
         DIRTIES = None;
         LISTENERS = None;
