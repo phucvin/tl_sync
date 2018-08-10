@@ -43,51 +43,51 @@ struct Button {
 
 fn main() {
     init_dirties();
-{
-    let r = Arc::new(SceneRoot::default());
+    {
+        let r = Arc::new(SceneRoot::default());
 
-    r.stack.to_mut().push(Scene {
-        title: Tl::new("Home".into()),
-        buttons: Tl::new(vec![Button {
-            pos: Tl::new((100, 50)),
-            txt: Tl::new("Click Me!".into()),
-        }]),
-        image_data: Arc::new(vec![8; 1024]),
-    });
+        r.stack.to_mut().push(Scene {
+            title: Tl::new("Home".into()),
+            buttons: Tl::new(vec![Button {
+                pos: Tl::new((100, 50)),
+                txt: Tl::new("Click Me!".into()),
+            }]),
+            image_data: Arc::new(vec![8; 1024]),
+        });
 
-    sync_from(2);
-    sync_to(1);
-    println!(
-        "{}: {} @ {:?}",
-        *r.stack[0].title, *r.stack[0].buttons[0].txt, *r.stack[0].buttons[0].pos
-    );
+        sync_from(2);
+        sync_to(1);
+        println!(
+            "{}: {} @ {:?}",
+            *r.stack[0].title, *r.stack[0].buttons[0].txt, *r.stack[0].buttons[0].pos
+        );
 
-    let handle = {
-        let r = r.clone();
-        thread::Builder::new()
-            .name("1_test".into())
-            .spawn(move || {
-                for _ in 1..10 {
-                    {
-                        let tmp = &r.stack[0].buttons[0];
-                        *tmp.txt.to_mut() = "Play".into();
-                        *tmp.pos.to_mut() = (tmp.pos.0 - 2, tmp.pos.1 + 3);
+        let handle = {
+            let r = r.clone();
+            thread::Builder::new()
+                .name("1_test".into())
+                .spawn(move || {
+                    for _ in 1..10 {
+                        {
+                            let tmp = &r.stack[0].buttons[0];
+                            *tmp.txt.to_mut() = "Play".into();
+                            *tmp.pos.to_mut() = (tmp.pos.0 - 2, tmp.pos.1 + 3);
+                        }
+
+                        sync_from(2);
                     }
 
-                    sync_from(2);
-                }
+                    thread::sleep(time::Duration::from_millis(10));
+                    sync_to(0);
+                }).unwrap()
+        };
 
-                thread::sleep(time::Duration::from_millis(10));
-                sync_to(0);
-            }).unwrap()
-    };
-
-    thread::sleep(time::Duration::from_millis(10));
-    handle.join().unwrap();
-    println!(
-        "{}: {} @ {:?}",
-        *r.stack[0].title, *r.stack[0].buttons[0].txt, *r.stack[0].buttons[0].pos
-    );
-}
+        thread::sleep(time::Duration::from_millis(10));
+        handle.join().unwrap();
+        println!(
+            "{}: {} @ {:?}",
+            *r.stack[0].title, *r.stack[0].buttons[0].txt, *r.stack[0].buttons[0].pos
+        );
+    }
     drop_dirties();
 }

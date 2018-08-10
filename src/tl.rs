@@ -69,13 +69,13 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         if !l.contains_key(&ptr) {
             l.insert(ptr, vec![]);
         }
-        
+
         let l = l.get_mut(&ptr).unwrap();
         let h = ListenerHandle { ptr };
         l.push((h, f));
 
         ListenerHandleRef {
-            handle: &l[l.len() - 1].0
+            handle: &l[l.len() - 1].0,
         }
     }
 }

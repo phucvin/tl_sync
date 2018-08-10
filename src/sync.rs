@@ -23,7 +23,7 @@ impl<'a> Drop for ListenerHandleRef<'a> {
 
         if let Some(l) = l.get_mut(&self.handle.ptr) {
             let mut found = None;
-            
+
             for (i, it) in l.iter().enumerate() {
                 if ptr::eq(&it.0, self.handle) {
                     found = Some(i);
@@ -36,7 +36,7 @@ impl<'a> Drop for ListenerHandleRef<'a> {
                 is_zeroed = l.len() == 0;
             }
         }
-                
+
         if is_zeroed {
             l.remove(&self.handle.ptr);
         }
@@ -58,11 +58,17 @@ pub fn drop_dirties() {
     let l = get_listeners();
 
     println!();
-    println!("DROP DIRTIES {} {} {}",
-        d.get(0).len(), d.get(1).len(), d.get(2).len()
+    println!(
+        "DROP DIRTIES {} {} {}",
+        d.get(0).len(),
+        d.get(1).len(),
+        d.get(2).len()
     );
-    println!("DROP LISTENERS {} {} {}",
-        l.get(0).len(), l.get(1).len(), l.get(2).len()
+    println!(
+        "DROP LISTENERS {} {} {}",
+        l.get(0).len(),
+        l.get(1).len(),
+        l.get(2).len()
     );
     println!();
 
