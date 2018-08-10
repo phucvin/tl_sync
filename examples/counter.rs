@@ -1,12 +1,15 @@
 extern crate tl_sync;
 
 use std::thread;
-use std::time;
 use std::sync::mpsc;
 use tl_sync::*;
 
 const LOOPS: usize = 5;
-const SLEEP: time::Duration = time::Duration::from_millis(1);
+
+fn heavy_computation() {
+    let tmp = Tl::new(vec![1; 1024 * 1024 * 10]);
+    tmp.sync(0, 1);
+}
 
 #[derive(PartialEq)]
 enum SyncStatus {
@@ -26,11 +29,16 @@ fn main() {
             thread::Builder::new()
                 .name("main_ui".into())
                 .spawn(move || {
-                    for _ in 0..(LOOPS + 1) {
+                    for i in 0..(LOOPS + 1) {
                         notify();
                         println!("ui_thread      | counter: {}", *root);
 
-                        thread::park();
+                        for _ in 0..2 {
+                            heavy_computation();
+                        }
+                        if i < LOOPS {
+                            thread::park();
+                        }
                     }
                 }).unwrap()
         };
@@ -44,7 +52,7 @@ fn main() {
                 .spawn(move || {
                     for _ in 0..LOOPS {
                         for _ in 0..2 {
-                            thread::sleep(SLEEP);
+                            heavy_computation();
                             *root.to_mut() += 1;
 
                             sync_from(2);
@@ -66,8 +74,6 @@ fn main() {
 
             ui_thread.thread().unpark();
         }
-        thread::sleep(SLEEP);
-        ui_thread.thread().unpark();
 
         ui_thread.join().unwrap();
         compute_thread.join().unwrap();
