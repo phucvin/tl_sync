@@ -12,7 +12,7 @@ struct Counter {
 
 fn heavy_computation() {
     let mut tmp = vec![];
-    for _i in 1..200 {
+    for _i in 1..100 {
         tmp.push(Tl::new(vec![1; 10_000]));
     }
     for it in tmp.iter() {
@@ -25,7 +25,6 @@ fn heavy_computation() {
 
 fn ui(root: Arc<Counter>) -> bool {
     println!("ui thread      | counter: {}", *root.counter);
-    heavy_computation();
     heavy_computation();
     
     *root.loops < LOOPS
@@ -46,7 +45,11 @@ fn main() {
             counter: Tl::new(0),
             loops: Tl::new(0),
         });
-        run_sync(root, ui, compute);
+        run(root, ui, compute);
     }
-    println!("\n{}s {}ms", now.elapsed().as_secs(), now.elapsed().subsec_millis());
+    let duration = now.elapsed();
+    let duration = duration.as_secs() * 1000 + duration.subsec_millis() as u64;
+    let fps = 1000 / (duration / 5);
+    println!("T   : {}ms", duration);
+    println!("FPS : {}", fps);
 }
