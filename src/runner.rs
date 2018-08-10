@@ -42,6 +42,7 @@ pub fn run<T: 'static + Send + Sync + Clone>(
                         tx.send(SyncStatus::Idle).unwrap();
                         
                         if ret == false {
+                            prepare_notify();
                             tx.send(SyncStatus::Quit).unwrap();
                             break;
                         }

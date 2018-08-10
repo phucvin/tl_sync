@@ -12,7 +12,7 @@ struct Counter {
 
 fn heavy_computation() {
     let mut tmp = vec![];
-    for _i in 1..10 {
+    for _i in 1..100 {
         tmp.push(Tl::new(vec![1; 10_000]));
     }
     for it in tmp.iter() {
