@@ -20,6 +20,7 @@ impl<'a> Drop for ListenerHandleRef<'a> {
     fn drop(&mut self) {
         println!("drop listener handle");
         let l = get_listeners().to_mut(thread_index());
+        let mut is_zeroed = false;
 
         if let Some(l) = l.get_mut(&self.handle.ptr) {
             let mut found = None;
@@ -34,7 +35,12 @@ impl<'a> Drop for ListenerHandleRef<'a> {
 
             if let Some(i) = found {
                 l.remove(i);
+                is_zeroed = l.len() == 0;
             }
+        }
+                
+        if is_zeroed {
+            l.remove(&self.handle.ptr);
         }
     }
 }
