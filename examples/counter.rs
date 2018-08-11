@@ -52,7 +52,7 @@ impl UiSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                println!("ui thread      | counter update");
+                // println!("ui thread      | counter update");
                 let mut controls = this.controls.borrow().clone().unwrap();
                 controls.btn_test.set_text(&this.iui,
                     &format!("Counter: {}", this.counter[0])
@@ -69,7 +69,7 @@ impl ComputeSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                println!("compute thread | counter changed to: {}", this.counter[0]);
+                // println!("compute thread | counter changed to: {}", this.counter[0]);
             }
         })));
 

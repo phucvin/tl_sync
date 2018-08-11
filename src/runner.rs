@@ -72,15 +72,22 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     });
 
     let tick = Box::new(move || {
+        let now = Instant::now();
+        
         let prepared = prepare_notify();
         notify(prepared);
+        let ui_elapsed = now.elapsed();
 
-        match compute_rx.recv_timeout(compute_update_duration) {
+        match compute_rx.recv_timeout(compute_update_duration - ui_elapsed) {
             Ok(SyncStatus::Idle) => (),
             Ok(SyncStatus::Quit) => return,
             _ => return,
         }
+        let compute_elapsed = now.elapsed() - ui_elapsed;
 
+        // TODO Check if current remaining time is enough to sync, before send
+        // if not, can postpone this sync to next tick,
+        // remember not recv from compute_rx in that next tick
         compute_rtx.send(true).unwrap();
         // Should not recv_timeout here
         // must wait until receive JustSync before continue,
@@ -90,6 +97,15 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             Ok(SyncStatus::Quit) => return,
             _ => return,
         }
+        let sync_elapsed = now.elapsed() - ui_elapsed - compute_elapsed;
+
+        let total_elapsed = now.elapsed();
+        println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
+            ui_elapsed.subsec_millis(),
+            compute_elapsed.subsec_millis(),
+            sync_elapsed.subsec_millis(),
+            1000 / total_elapsed.subsec_millis(),
+        );
     });
 
     (tick, stop)
