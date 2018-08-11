@@ -143,7 +143,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                 // );
                 return;
             }
-            _ => return,
+            _ => panic!("Unexpected error on ticker"),
         }
         // let compute_elapsed = now.elapsed() - ui_elapsed;
 
@@ -156,7 +156,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         // to avoid incomplete data sync when render UI
         match compute_rx.recv() {
             Ok(SyncStatus::JustSync) => (),
-            _ => return,
+            _ => panic!("Unexpected error on ticker"),
         }
         // let sync_elapsed = now.elapsed() - ui_elapsed - compute_elapsed;
 
