@@ -38,12 +38,14 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             .spawn(move || {
                 root.setup_compute();
                 loop {
-                    let mut still_dirty = true;
-                    let now = Instant::now();
-                    while still_dirty && now.elapsed() < compute_update_duration {
-                        sync_from(2);
-                        still_dirty = peek_notify() > 0;
-                    }
+                    // let mut still_dirty = true;
+                    // let now = Instant::now();
+                    // while still_dirty && now.elapsed() < compute_update_duration {
+                    //     sync_from(2);
+                    //     still_dirty = peek_notify() > 0;
+                    // }
+                    sync_from(2);
+                    peek_notify();
 
                     match tx.send(SyncStatus::Idle) {
                         Ok(_) => (),
