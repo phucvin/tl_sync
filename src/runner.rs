@@ -124,7 +124,10 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         }
         // let sync_elapsed = now.elapsed() - ui_elapsed - compute_elapsed;
 
-        // let total_elapsed = now.elapsed();
+        let total_elapsed = now.elapsed();
+        if total_elapsed < compute_update_duration {
+            thread::sleep(compute_update_duration - total_elapsed);
+        }
         // println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
         //     ui_elapsed.subsec_millis(),
         //     compute_elapsed.subsec_millis(),

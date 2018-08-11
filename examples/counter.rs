@@ -76,7 +76,7 @@ impl ComputeSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                if this.counter[0] < 2500 {
+                if this.counter[0] < 250 {
                     // for it in this.counter.to_mut().iter_mut() {
                     //     *it += 1;
                     // }
