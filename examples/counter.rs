@@ -7,6 +7,7 @@ use iui::prelude::*;
 use iui::controls::{Button};
 use std::sync::{Arc, Mutex};
 use std::cell::RefCell;
+use std::time::Duration;
 use tl_sync::*;
 
 #[derive(Clone)]
@@ -16,7 +17,7 @@ struct Controls {
 
 #[derive(Clone)]
 struct Counter {
-    counter: Tl<usize>,
+    counter: Tl<Vec<usize>>,
     iui: Trust<UI>,
     controls: Trust<RefCell<Option<Controls>>>,
     listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
@@ -49,9 +50,10 @@ impl UiSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
+                println!("ui thread      | counter update");
                 let mut controls = this.controls.borrow().clone().unwrap();
                 controls.btn_test.set_text(&this.iui,
-                    &format!("Counter: {}", *this.counter)
+                    &format!("Counter: {}", this.counter[0])
                 );
             }
         })));
@@ -60,20 +62,22 @@ impl UiSetup for Counter {
 
 impl ComputeSetup for Counter {
     fn setup_compute(&self) {
-        *self.counter.to_mut() = 15;
+        self.counter.to_mut()[0] = 1;
 
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                println!("compute thread | counter changed to: {}", *this.counter);
+                println!("compute thread | counter changed to: {}", this.counter[0]);
             }
         })));
 
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                if *this.counter < 25 {
-                    *this.counter.to_mut() += 1;
+                if this.counter[0] < 2500 {
+                    for it in this.counter.to_mut().iter_mut() {
+                        *it += 1;
+                    }
                 }
             }
         })));
@@ -84,7 +88,7 @@ fn main() {
     let stop = {
         let iui = UI::init().unwrap();
         let root = Counter {
-            counter: Tl::new(0),
+            counter: Tl::new(vec![0; 1_000]),
             iui: Trust::new(iui.clone()),
             controls: Trust::new(RefCell::new(None)),
             listeners: Default::default(),
