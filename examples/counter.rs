@@ -54,9 +54,8 @@ impl UiSetup for Counter {
             let this = self.clone();
             move || {
                 let dt = Instant::now() - *this.last_time;
+                println!("Compute's FPS: {}", 1000 / (dt.subsec_millis() + 1));
 
-                println!("Compute FPS: {}", 1000 / (dt.subsec_millis() + 1));
-                // println!("ui thread      | counter update");
                 let mut controls = this.controls.borrow().clone().unwrap();
                 controls.btn_test.set_text(&this.iui,
                     &format!("Counter: {}", this.counter[0])
