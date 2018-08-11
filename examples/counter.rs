@@ -33,7 +33,7 @@ impl UiSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                println!("ui thread     | counter changed to: {}", *this.counter);
+                println!("ui thread      | counter changed to: {}", *this.counter);
             }
         })));
     }
@@ -41,10 +41,21 @@ impl UiSetup for Counter {
 
 impl ComputeSetup for Counter {
     fn setup_compute(&self) {
+        *self.counter.to_mut() = 15;
+
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
                 println!("compute thread | counter changed to: {}", *this.counter);
+            }
+        })));
+
+        self.push(self.counter.register_listener(Box::new({
+            let this = self.clone();
+            move || {
+                if *this.counter < 25 {
+                    *this.counter.to_mut() += 1;
+                }
             }
         })));
     }
