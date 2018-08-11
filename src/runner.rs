@@ -37,8 +37,11 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             .spawn(move || {
                 root.setup_compute();
                 loop {
-                    sync_from(2);
-                    // TODO Notify for compute too
+                    let mut still_dirty = true;
+                    while still_dirty {
+                        sync_from(2);
+                        still_dirty = peek_notify() > 0;
+                    }
 
                     tx.send(SyncStatus::Idle).unwrap();
                     match rx.recv() {

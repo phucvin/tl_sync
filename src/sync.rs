@@ -150,19 +150,24 @@ pub fn prepare_notify() -> Vec<(u8, Box<Dirty>)> {
     tmp
 }
 
-pub fn peek_notify() {
+pub fn peek_notify() -> usize {
     let to = thread_index();
     let l = get_listeners().get(to);
     let d = get_dirties().to_mut(to);
 
     // println!("PEEK NOTIFY -> {} : {}", to, d.len());
+    let mut count = 0;
     for it in d.iter_mut() {
         if it.0 != 2 { continue; }
         else { it.0 = 3; }
-        
+
         let ptr = it.1.get_ptr();
         if let Some(l) = l.get(&ptr) {
             l.iter().for_each(|it| it.1());
         }
+
+        count += 1;
     }
+
+    count
 }
