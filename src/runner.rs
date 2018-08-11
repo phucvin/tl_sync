@@ -82,33 +82,33 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         notify(prepared);
         let ui_elapsed = now.elapsed();
 
-        if ui_elapsed > compute_update_duration {
-            let total_elapsed = now.elapsed();
-            println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
-                ui_elapsed.subsec_millis(),
-                0,
-                0,
-                1000 / (total_elapsed.subsec_millis() + 1),
-            );
-            return;
-        }
+        // if ui_elapsed > compute_update_duration {
+        //     let total_elapsed = now.elapsed();
+        //     println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
+        //         ui_elapsed.subsec_millis(),
+        //         0,
+        //         0,
+        //         1000 / (total_elapsed.subsec_millis() + 1),
+        //     );
+        //     return;
+        // }
         match compute_rx.recv_timeout(compute_update_duration - ui_elapsed) {
             Ok(SyncStatus::Idle) => (),
             Ok(SyncStatus::Quit) => return,
             Err(mpsc::RecvTimeoutError::Timeout) => {
-                let total_elapsed = now.elapsed();
-                let compute_elapsed = total_elapsed - ui_elapsed;
-                println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
-                    ui_elapsed.subsec_millis(),
-                    compute_elapsed.subsec_millis(),
-                    0,
-                    1000 / (total_elapsed.subsec_millis() + 1),
-                );
+                // let total_elapsed = now.elapsed();
+                // let compute_elapsed = total_elapsed - ui_elapsed;
+                // println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
+                //     ui_elapsed.subsec_millis(),
+                //     compute_elapsed.subsec_millis(),
+                //     0,
+                //     1000 / (total_elapsed.subsec_millis() + 1),
+                // );
                 return
             }
             _ => return,
         }
-        let compute_elapsed = now.elapsed() - ui_elapsed;
+        // let compute_elapsed = now.elapsed() - ui_elapsed;
 
         // TODO Check if current remaining time is enough to sync, before send
         // if not, can postpone this sync to next tick,
@@ -122,15 +122,15 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             Ok(SyncStatus::Quit) => return,
             _ => return,
         }
-        let sync_elapsed = now.elapsed() - ui_elapsed - compute_elapsed;
+        // let sync_elapsed = now.elapsed() - ui_elapsed - compute_elapsed;
 
-        let total_elapsed = now.elapsed();
-        println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
-            ui_elapsed.subsec_millis(),
-            compute_elapsed.subsec_millis(),
-            sync_elapsed.subsec_millis(),
-            1000 / (total_elapsed.subsec_millis() + 1),
-        );
+        // let total_elapsed = now.elapsed();
+        // println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
+        //     ui_elapsed.subsec_millis(),
+        //     compute_elapsed.subsec_millis(),
+        //     sync_elapsed.subsec_millis(),
+        //     1000 / (total_elapsed.subsec_millis() + 1),
+        // );
     });
 
     (tick, stop)
