@@ -89,7 +89,10 @@ fn main() {
             controls: Trust::new(RefCell::new(None)),
             listeners: Default::default(),
         };
-        let (tick, stop) = setup(root);
+        let (tick, stop) = setup(
+            root,
+            Duration::from_millis(5)
+        );
         let mut ev = iui.event_loop();
         
         ev.on_tick(&iui, move || {
