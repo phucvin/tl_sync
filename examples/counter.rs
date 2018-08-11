@@ -109,7 +109,13 @@ fn main() {
         ev.on_tick(&iui, move || {
             tick()
         });
-        ev.run(&iui);
+
+        // ev.run(&iui);
+        loop {
+            if !ev.next_tick(&iui) {
+                break;
+            }
+        }
 
         stop
     };
