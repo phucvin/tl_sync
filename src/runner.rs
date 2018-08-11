@@ -159,8 +159,6 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             _ => return,
         }
         // let sync_elapsed = now.elapsed() - ui_elapsed - compute_elapsed;
-        
-        clear_actions();
 
         let total_elapsed = now.elapsed();
         if total_elapsed < compute_update_duration {
@@ -172,6 +170,8 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         //     sync_elapsed.subsec_millis(),
         //     1000 / (total_elapsed.subsec_millis() + 1),
         // );
+        
+        clear_actions();
     });
 
     (tick, stop)
