@@ -39,8 +39,9 @@ impl UiSetup for Counter {
         let mut win = Window::new(&self.iui, "Counter", 400, 300, WindowType::NoMenubar);
 
         let mut btn_test = Button::new(&self.iui, "Click Me");
-        btn_test.on_clicked(&self.iui, |_| {
-            fire(Box::new(1 as u8));
+        btn_test.on_clicked(&self.iui, {
+            let this = self.clone();
+            move |_| fire(Box::new(this.counter[0]))
         });
         win.set_child(&self.iui, btn_test.clone());
 
@@ -51,8 +52,8 @@ impl UiSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                let dt = Instant::now() - *this.last_time;
-                println!("Compute's FPS: {}", 1000 / (dt.subsec_millis() + 1));
+                // let dt = Instant::now() - *this.last_time;
+                // println!("Compute's FPS: {}", 1000 / (dt.subsec_millis() + 1));
 
                 let mut controls = this.controls.borrow().clone().unwrap();
                 controls
@@ -63,7 +64,7 @@ impl UiSetup for Counter {
     }
 
     fn ui_act_on(&self, action: &Box<Any>) {
-        println!("ui_act_on {}", action.downcast_ref::<u8>().unwrap());
+        println!("ui_act_on {}", action.downcast_ref::<usize>().unwrap());
     }
 }
 
@@ -81,7 +82,7 @@ impl ComputeSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                if this.counter[0] < 25 {
+                if this.counter[0] < 250 {
                     // for it in this.counter.to_mut().iter_mut() {
                     //     *it += 1;
                     // }
@@ -95,7 +96,7 @@ impl ComputeSetup for Counter {
     }
 
     fn compute_act_on(&self, action: &Box<Any>) {
-        println!("compute_act_on {}", action.downcast_ref::<u8>().unwrap());
+        println!("compute_act_on {}", action.downcast_ref::<usize>().unwrap());
     }
 }
 
