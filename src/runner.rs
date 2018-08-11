@@ -78,6 +78,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         notify(prepared);
         let ui_elapsed = now.elapsed();
 
+        if ui_elapsed > compute_update_duration { return; }
         match compute_rx.recv_timeout(compute_update_duration - ui_elapsed) {
             Ok(SyncStatus::Idle) => (),
             Ok(SyncStatus::Quit) => return,
