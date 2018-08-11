@@ -62,7 +62,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
     }
 }
 
-impl<T: ManualCopy<T>> Dirty for Tl<T> {
+impl<T: 'static + ManualCopy<T>> Dirty for Tl<T> {
     fn sync(&self, from: usize, to: usize) {
         self.cell.inner_manual_copy(from, to);
     }
@@ -85,6 +85,10 @@ impl<T: ManualCopy<T>> Dirty for Tl<T> {
         ListenerHandleRef {
             handle: &l[l.len() - 1].0,
         }
+    }
+
+    fn re_add(&self) {
+        self.to_mut();
     }
 }
 

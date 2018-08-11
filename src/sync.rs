@@ -6,6 +6,7 @@ pub trait Dirty {
     fn sync(&self, from: usize, to: usize);
     fn get_ptr(&self) -> usize;
     fn register_listener(&self, Box<Fn()>) -> ListenerHandleRef;
+    fn re_add(&self);
 }
 
 pub struct ListenerHandle {
@@ -101,13 +102,22 @@ pub fn sync_to(to: usize) {
     let from = thread_index();
     let df = get_dirties().to_mut(from);
 
+    let mut tmp = vec![];
+    tmp.append(df);
+
     // println!("SYNC {} -> {} : {}", from, to, df.len());
-    df.iter().for_each(|it| it.1.sync(from, to));
+    tmp.iter().for_each(|it| {
+        it.1.sync(from, to);
+
+        if it.0 == 1 {
+            it.1.re_add();
+        }
+    });
     
     let dt = get_dirties().to_mut(to);
     // TODO Consider allow remain dirties in case ui thread take too long
     assert!(dt.len() == 0, format!("Should notify before sync {} -> {}", from, to));
-    dt.append(df);
+    dt.append(&mut tmp);
 }
 
 pub fn sync_from(from: usize) {
