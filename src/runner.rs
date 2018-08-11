@@ -85,6 +85,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         if ui_elapsed > compute_update_duration { return; }
         match compute_rx.recv_timeout(compute_update_duration - ui_elapsed) {
             Ok(SyncStatus::Idle) => (),
+            Ok(SyncStatus::JustSync) => (),
             Ok(SyncStatus::Quit) => return,
             _ => return,
         }
@@ -97,7 +98,8 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         // Should not recv_timeout here
         // must wait until receive JustSync before continue,
         // to avoid incomplete data sync when render UI
-        match compute_rx.recv() {
+        if ui_elapsed + compute_elapsed > compute_update_duration { return; }
+        match compute_rx.recv_timeout(compute_update_duration - ui_elapsed - compute_elapsed) {
             Ok(SyncStatus::JustSync) => (),
             Ok(SyncStatus::Quit) => return,
             _ => return,
