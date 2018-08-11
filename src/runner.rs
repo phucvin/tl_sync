@@ -49,9 +49,13 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                         tmp.append(&mut actions);
                         tmp
                     };
-                    for it in actions.iter() {
-                        root.compute_act_on(it);
+                    for it in actions.iter_mut() {
+                        if it.0 == 0 || it.0 == 1 {
+                            root.compute_act_on(&it.1);
+                            it.0 += 2;
+                        }
                     }
+                    actions.retain(|it| it.0 < 3);
                     {
                         let tmp = get_actions();
                         let mut tmp = tmp.lock().unwrap();
@@ -109,9 +113,13 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             tmp.append(&mut actions);
             tmp
         };
-        for it in actions.iter() {
-            root.ui_act_on(it);
+        for it in actions.iter_mut() {
+            if it.0 == 0 || it.0 == 2 {
+                root.ui_act_on(&it.1);
+                it.0 += 1;
+            }
         }
+        actions.retain(|it| it.0 < 3);
         {
             let tmp = get_actions();
             let mut tmp = tmp.lock().unwrap();
@@ -170,8 +178,6 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         //     sync_elapsed.subsec_millis(),
         //     1000 / (total_elapsed.subsec_millis() + 1),
         // );
-        
-        clear_actions();
     });
 
     (tick, stop)

@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::any::Any;
 
 // TODO Use context instead of static
-static mut ACTIONS: Option<Arc<Mutex<Vec<Box<Any>>>>> = None;
+static mut ACTIONS: Option<Arc<Mutex<Vec<(u8, Box<Any>)>>>> = None;
 
 pub fn init_actions() {
     unsafe {
@@ -16,7 +16,7 @@ pub fn drop_actions() {
     }
 }
 
-pub fn get_actions() -> Arc<Mutex<Vec<Box<Any>>>> {
+pub fn get_actions() -> Arc<Mutex<Vec<(u8, Box<Any>)>>> {
     unsafe {
         match ACTIONS {
             Some(ref d) => d.clone(),
@@ -27,10 +27,5 @@ pub fn get_actions() -> Arc<Mutex<Vec<Box<Any>>>> {
 
 pub fn fire(action: Box<Any>) {
     let actions = get_actions();
-    actions.lock().unwrap().push(action);
-}
-
-pub fn clear_actions() {
-    let actions = get_actions();
-    actions.lock().unwrap().clear();
+    actions.lock().unwrap().push((0, action));
 }
