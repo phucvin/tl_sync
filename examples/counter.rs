@@ -10,6 +10,7 @@ use rayon::prelude::*;
 use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use std::any::Any;
 use tl_sync::*;
 
 #[derive(Clone)]
@@ -37,7 +38,10 @@ impl UiSetup for Counter {
     fn setup_ui(&self) {
         let mut win = Window::new(&self.iui, "Counter", 400, 300, WindowType::NoMenubar);
 
-        let btn_test = Button::new(&self.iui, "Click Me");
+        let mut btn_test = Button::new(&self.iui, "Click Me");
+        btn_test.on_clicked(&self.iui, |_| {
+            fire(Box::new(1 as u8));
+        });
         win.set_child(&self.iui, btn_test.clone());
 
         *self.controls.borrow_mut() = Some(Controls { btn_test });
@@ -57,6 +61,10 @@ impl UiSetup for Counter {
             }
         })));
     }
+
+    fn ui_act_on(&self, action: &Box<Any>) {
+        println!("ui_act_on {}", action.downcast_ref::<u8>().unwrap());
+    }
 }
 
 impl ComputeSetup for Counter {
@@ -73,7 +81,7 @@ impl ComputeSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                if this.counter[0] < 250 {
+                if this.counter[0] < 25 {
                     // for it in this.counter.to_mut().iter_mut() {
                     //     *it += 1;
                     // }
@@ -84,6 +92,10 @@ impl ComputeSetup for Counter {
                 }
             }
         })));
+    }
+
+    fn compute_act_on(&self, action: &Box<Any>) {
+        println!("compute_act_on {}", action.downcast_ref::<u8>().unwrap());
     }
 }
 

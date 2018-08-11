@@ -3,6 +3,7 @@ use std::boxed::FnBox;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
+use std::any::Any;
 
 #[derive(PartialEq)]
 enum SyncStatus {
@@ -12,10 +13,12 @@ enum SyncStatus {
 
 pub trait UiSetup {
     fn setup_ui(&self);
+    fn ui_act_on(&self, &Box<Any>);
 }
 
 pub trait ComputeSetup {
     fn setup_compute(&self);
+    fn compute_act_on(&self, &Box<Any>);
 }
 
 pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
@@ -23,6 +26,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     compute_update_duration: Duration,
 ) -> (Box<Fn()>, Box<FnBox()>) {
     init_dirties();
+    init_actions();
 
     let (compute_tx, compute_rx) = mpsc::channel();
     let compute_rtx: mpsc::Sender<bool>;
@@ -38,6 +42,22 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             .spawn(move || {
                 root.setup_compute();
                 loop {
+                    let mut actions = {
+                        let actions = get_actions();
+                        let mut actions = actions.lock().unwrap();
+                        let mut tmp = vec![];
+                        tmp.append(&mut actions);
+                        tmp
+                    };
+                    for it in actions.iter() {
+                        root.compute_act_on(it);
+                    }
+                    {
+                        let tmp = get_actions();
+                        let mut tmp = tmp.lock().unwrap();
+                        tmp.append(&mut actions);
+                    }
+
                     let mut still_dirty = true;
                     let now = Instant::now();
                     while still_dirty && now.elapsed() < compute_update_duration {
@@ -70,6 +90,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         move || {
             compute_rtx.send(false).unwrap();
             prepare_notify();
+            drop_actions();
             drop_dirties();
         }
     });
@@ -79,6 +100,24 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
 
         let prepared = prepare_notify();
         notify(prepared);
+
+        // TODO Move to a fn to reuse
+        let mut actions = {
+            let actions = get_actions();
+            let mut actions = actions.lock().unwrap();
+            let mut tmp = vec![];
+            tmp.append(&mut actions);
+            tmp
+        };
+        for it in actions.iter() {
+            root.ui_act_on(it);
+        }
+        {
+            let tmp = get_actions();
+            let mut tmp = tmp.lock().unwrap();
+            tmp.append(&mut actions);
+        }
+
         let ui_elapsed = now.elapsed();
 
         if ui_elapsed > compute_update_duration {
@@ -120,6 +159,8 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             _ => return,
         }
         // let sync_elapsed = now.elapsed() - ui_elapsed - compute_elapsed;
+        
+        clear_actions();
 
         let total_elapsed = now.elapsed();
         if total_elapsed < compute_update_duration {
