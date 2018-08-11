@@ -3,8 +3,8 @@
 extern crate test;
 extern crate tl_sync;
 
-use test::Bencher;
 use std::sync::Arc;
+use test::Bencher;
 use tl_sync::*;
 
 const LOOPS: usize = 1;
@@ -29,14 +29,14 @@ fn heavy_computation() {
 
 fn ui(root: Arc<Counter>) -> bool {
     heavy_computation();
-    
+
     *root.loops < LOOPS
 }
 
 fn compute(root: Arc<Counter>) -> bool {
     *root.counter.to_mut() += 1;
     heavy_computation();
-    
+
     *root.loops.to_mut() += 1;
     *root.loops < LOOPS
 }

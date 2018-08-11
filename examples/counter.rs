@@ -1,15 +1,15 @@
 // #![windows_subsystem="windows"]
 
 extern crate iui;
-extern crate tl_sync;
 extern crate rayon;
+extern crate tl_sync;
 
+use iui::controls::Button;
 use iui::prelude::*;
-use iui::controls::{Button};
-use std::sync::{Arc, Mutex};
-use std::cell::RefCell;
-use std::time::{Instant, Duration};
 use rayon::prelude::*;
+use std::cell::RefCell;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tl_sync::*;
 
 #[derive(Clone)]
@@ -35,18 +35,12 @@ impl Counter {
 
 impl UiSetup for Counter {
     fn setup_ui(&self) {
-        let mut win = Window::new(
-            &self.iui, "Counter",
-            400, 300,
-            WindowType::NoMenubar
-        );
+        let mut win = Window::new(&self.iui, "Counter", 400, 300, WindowType::NoMenubar);
 
         let btn_test = Button::new(&self.iui, "Click Me");
         win.set_child(&self.iui, btn_test.clone());
 
-        *self.controls.borrow_mut() = Some(Controls {
-            btn_test
-        });
+        *self.controls.borrow_mut() = Some(Controls { btn_test });
 
         win.show(&self.iui);
 
@@ -57,9 +51,9 @@ impl UiSetup for Counter {
                 println!("Compute's FPS: {}", 1000 / (dt.subsec_millis() + 1));
 
                 let mut controls = this.controls.borrow().clone().unwrap();
-                controls.btn_test.set_text(&this.iui,
-                    &format!("Counter: {}", this.counter[0])
-                );
+                controls
+                    .btn_test
+                    .set_text(&this.iui, &format!("Counter: {}", this.counter[0]));
             }
         })));
     }
@@ -94,7 +88,10 @@ impl ComputeSetup for Counter {
 }
 
 fn main() {
-    rayon::ThreadPoolBuilder::new().num_threads(3).build_global().unwrap();
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(3)
+        .build_global()
+        .unwrap();
 
     let stop = {
         let iui = UI::init().unwrap();
@@ -105,15 +102,10 @@ fn main() {
             controls: Trust::new(RefCell::new(None)),
             listeners: Default::default(),
         };
-        let (tick, stop) = setup(
-            root,
-            Duration::from_millis(15)
-        );
+        let (tick, stop) = setup(root, Duration::from_millis(15));
         let mut ev = iui.event_loop();
-        
-        ev.on_tick(&iui, move || {
-            tick()
-        });
+
+        ev.on_tick(&iui, move || tick());
 
         // ev.run(&iui);
         loop {

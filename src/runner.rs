@@ -1,8 +1,8 @@
-use std::thread;
-use std::sync::mpsc;
-use std::boxed::FnBox;
-use std::time::{Instant, Duration};
 use super::*;
+use std::boxed::FnBox;
+use std::sync::mpsc;
+use std::thread;
+use std::time::{Duration, Instant};
 
 #[derive(PartialEq)]
 enum SyncStatus {
@@ -77,7 +77,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
 
     let tick = Box::new(move || {
         let now = Instant::now();
-        
+
         let prepared = prepare_notify();
         notify(prepared);
         let ui_elapsed = now.elapsed();
@@ -104,7 +104,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                 //     0,
                 //     1000 / (total_elapsed.subsec_millis() + 1),
                 // );
-                return
+                return;
             }
             _ => return,
         }
@@ -139,11 +139,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     (tick, stop)
 }
 
-pub fn run<T: 'static + Send + Sync + Clone>(
-    root: T,
-    ui: fn(T) -> bool,
-    compute: fn(T) -> bool
-) {
+pub fn run<T: 'static + Send + Sync + Clone>(root: T, ui: fn(T) -> bool, compute: fn(T) -> bool) {
     init_dirties();
     {
         let (compute_tx, compute_rx) = mpsc::channel();
@@ -157,20 +153,18 @@ pub fn run<T: 'static + Send + Sync + Clone>(
 
             thread::Builder::new()
                 .name("1_compute".into())
-                .spawn(move || {
-                    loop {
-                        let ret = compute(root.clone());
-                        sync_from(2);
+                .spawn(move || loop {
+                    let ret = compute(root.clone());
+                    sync_from(2);
 
-                        tx.send(SyncStatus::Idle).unwrap();
-                        rx.recv().unwrap();
-                        sync_to(0);
-                        tx.send(SyncStatus::JustSync).unwrap();
+                    tx.send(SyncStatus::Idle).unwrap();
+                    rx.recv().unwrap();
+                    sync_to(0);
+                    tx.send(SyncStatus::JustSync).unwrap();
 
-                        if ret == false {
-                            tx.send(SyncStatus::Quit).unwrap();
-                            break;
-                        }
+                    if ret == false {
+                        tx.send(SyncStatus::Quit).unwrap();
+                        break;
                     }
                 }).unwrap()
         };
@@ -192,7 +186,7 @@ pub fn run<T: 'static + Send + Sync + Clone>(
                 Ok(SyncStatus::Quit) => break,
                 _ => break,
             }
-            
+
             if ret == false {
                 prepare_notify();
                 break;
@@ -204,11 +198,7 @@ pub fn run<T: 'static + Send + Sync + Clone>(
     drop_dirties();
 }
 
-pub fn run_single<T: 'static + Clone>(
-    root: T,
-    ui: fn(T) -> bool,
-    compute: fn(T) -> bool
-) {
+pub fn run_single<T: 'static + Clone>(root: T, ui: fn(T) -> bool, compute: fn(T) -> bool) {
     init_dirties();
     {
         loop {
