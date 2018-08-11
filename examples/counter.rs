@@ -88,7 +88,7 @@ fn main() {
     let stop = {
         let iui = UI::init().unwrap();
         let root = Counter {
-            counter: Tl::new(vec![0; 1_000]),
+            counter: Tl::new(vec![0; 1024 * 1024 * 5]),
             iui: Trust::new(iui.clone()),
             controls: Trust::new(RefCell::new(None)),
             listeners: Default::default(),
