@@ -38,20 +38,23 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
             let d = get_dirties().to_mut(thread_index());
             let tmp = Box::new(self.clone());
             let ptr = tmp.cell.arr.get();
-
             let mut is_unique = true;
-            for it in d.iter() {
+
+            for it in d.iter_mut() {
                 if it.1.get_ptr() == ptr as usize {
-                    if it.0 > 1 {
+                    if it.0 == 1 {
                         panic!("Only allow one mutation each sync");
+                    } else {
+                        it.0 = 1;
                     }
+
                     is_unique = false;
                     break;
                 }
             }
 
             if is_unique {
-                d.push((2, tmp));
+                d.push((1, tmp));
             }
         }
 

@@ -115,10 +115,12 @@ pub fn sync_from(from: usize) {
     let dt = get_dirties().to_mut(to);
 
     // println!("SYNC {} <- {} : {}", to, from, dt.len());
-    dt.iter_mut().for_each(|it| {
-        it.0 = 1;
+    for it in dt.iter_mut() {
+        if it.0 != 1 { continue; }
+        else { it.0 = 2; }
+
         it.1.sync(from, to);
-    });
+    }
 
     // No need copy lock here because already same thread
     // when sync from mutate
@@ -146,4 +148,21 @@ pub fn prepare_notify() -> Vec<(u8, Box<Dirty>)> {
     
     tmp.append(d);
     tmp
+}
+
+pub fn peek_notify() {
+    let to = thread_index();
+    let l = get_listeners().get(to);
+    let d = get_dirties().to_mut(to);
+
+    // println!("PEEK NOTIFY -> {} : {}", to, d.len());
+    for it in d.iter_mut() {
+        if it.0 != 2 { continue; }
+        else { it.0 = 3; }
+        
+        let ptr = it.1.get_ptr();
+        if let Some(l) = l.get(&ptr) {
+            l.iter().for_each(|it| it.1());
+        }
+    }
 }
