@@ -100,7 +100,7 @@ fn main() {
     let stop = {
         let iui = UI::init().unwrap();
         let root = Counter {
-            counter: Tl::new(vec![0; 1024 * 1024 * 50]),
+            counter: Tl::new(vec![0; 1024 * 1024 * 5]),
             last_time: Tl::new(Instant::now()),
             iui: Trust::new(iui.clone()),
             controls: Trust::new(RefCell::new(None)),
