@@ -42,25 +42,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             .spawn(move || {
                 root.setup_compute();
                 loop {
-                    let mut actions = {
-                        let actions = get_actions();
-                        let mut actions = actions.lock().unwrap();
-                        let mut tmp = vec![];
-                        tmp.append(&mut actions);
-                        tmp
-                    };
-                    for it in actions.iter_mut() {
-                        if it.0 == 0 || it.0 == 1 {
-                            root.compute_act_on(&it.1);
-                            it.0 += 2;
-                        }
-                    }
-                    actions.retain(|it| it.0 < 3);
-                    {
-                        let tmp = get_actions();
-                        let mut tmp = tmp.lock().unwrap();
-                        tmp.append(&mut actions);
-                    }
+                    notify_actions(&root, 2);
 
                     let mut still_dirty = true;
                     let now = Instant::now();
@@ -105,26 +87,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         let prepared = prepare_notify();
         notify(prepared);
 
-        // TODO Move to a fn to reuse
-        let mut actions = {
-            let actions = get_actions();
-            let mut actions = actions.lock().unwrap();
-            let mut tmp = vec![];
-            tmp.append(&mut actions);
-            tmp
-        };
-        for it in actions.iter_mut() {
-            if it.0 == 0 || it.0 == 2 {
-                root.ui_act_on(&it.1);
-                it.0 += 1;
-            }
-        }
-        actions.retain(|it| it.0 < 3);
-        {
-            let tmp = get_actions();
-            let mut tmp = tmp.lock().unwrap();
-            tmp.append(&mut actions);
-        }
+        notify_actions(&root, 1);
 
         let ui_elapsed = now.elapsed();
 
