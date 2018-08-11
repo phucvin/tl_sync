@@ -1,4 +1,5 @@
 use std::cmp;
+use std::time::Instant;
 // use rayon::prelude::*;
 
 pub trait ManualCopy<T> {
@@ -13,6 +14,12 @@ impl ManualCopy<u8> for u8 {
 
 impl ManualCopy<usize> for usize {
     fn copy_from(&mut self, other: &usize) {
+        *self = *other;
+    }
+}
+
+impl ManualCopy<Instant> for Instant {
+    fn copy_from(&mut self, other: &Instant) {
         *self = *other;
     }
 }

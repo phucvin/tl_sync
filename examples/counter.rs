@@ -8,7 +8,7 @@ use iui::prelude::*;
 use iui::controls::{Button};
 use std::sync::{Arc, Mutex};
 use std::cell::RefCell;
-use std::time::Duration;
+use std::time::{Instant, Duration};
 use rayon::prelude::*;
 use tl_sync::*;
 
@@ -20,6 +20,7 @@ struct Controls {
 #[derive(Clone)]
 struct Counter {
     counter: Tl<Vec<usize>>,
+    last_time: Tl<Instant>,
     iui: Trust<UI>,
     controls: Trust<RefCell<Option<Controls>>>,
     listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
@@ -52,6 +53,9 @@ impl UiSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
+                let dt = Instant::now() - *this.last_time;
+
+                println!("Compute FPS: {}", 1000 / (dt.subsec_millis() + 1));
                 // println!("ui thread      | counter update");
                 let mut controls = this.controls.borrow().clone().unwrap();
                 controls.btn_test.set_text(&this.iui,
@@ -83,6 +87,7 @@ impl ComputeSetup for Counter {
                     this.counter.to_mut().par_iter_mut().for_each(|it| {
                         *it += 1;
                     });
+                    *this.last_time.to_mut() = Instant::now();
                 }
             }
         })));
@@ -95,7 +100,8 @@ fn main() {
     let stop = {
         let iui = UI::init().unwrap();
         let root = Counter {
-            counter: Tl::new(vec![0; 1024 * 1024 * 5]),
+            counter: Tl::new(vec![0; 1024 * 1024 * 50]),
+            last_time: Tl::new(Instant::now()),
             iui: Trust::new(iui.clone()),
             controls: Trust::new(RefCell::new(None)),
             listeners: Default::default(),
