@@ -1,4 +1,5 @@
 use std::cmp;
+// use rayon::prelude::*;
 
 pub trait ManualCopy<T> {
     fn copy_from(&mut self, &T);
@@ -40,7 +41,7 @@ impl<T1: Clone, T2: Clone> ManualCopy<(T1, T2)> for (T1, T2) {
     }
 }
 
-impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
+impl<U: Send + Sync + Clone> ManualCopy<Vec<U>> for Vec<U> {
     fn copy_from(&mut self, other: &Vec<U>) {
         // TODO If U: Copy, try to use memcpy (copy_from_slice)
         let slen = self.len();
@@ -58,5 +59,9 @@ impl<U: Clone> ManualCopy<Vec<U>> for Vec<U> {
         for i in 0..min_len {
             self[i] = other[i].clone();
         }
+        // TODO Should use parallel to sync, if faster than single thread
+        // self.as_mut_slice()[..min_len].par_iter_mut().enumerate().for_each(|(i, it)| {
+        //     *it = other[i].clone();
+        // });
     }
 }

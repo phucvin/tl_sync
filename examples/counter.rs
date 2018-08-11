@@ -2,12 +2,14 @@
 
 extern crate iui;
 extern crate tl_sync;
+extern crate rayon;
 
 use iui::prelude::*;
 use iui::controls::{Button};
 use std::sync::{Arc, Mutex};
 use std::cell::RefCell;
 use std::time::Duration;
+use rayon::prelude::*;
 use tl_sync::*;
 
 #[derive(Clone)]
@@ -75,9 +77,12 @@ impl ComputeSetup for Counter {
             let this = self.clone();
             move || {
                 if this.counter[0] < 2500 {
-                    for it in this.counter.to_mut().iter_mut() {
+                    // for it in this.counter.to_mut().iter_mut() {
+                    //     *it += 1;
+                    // }
+                    this.counter.to_mut().par_iter_mut().for_each(|it| {
                         *it += 1;
-                    }
+                    });
                 }
             }
         })));
@@ -85,6 +90,8 @@ impl ComputeSetup for Counter {
 }
 
 fn main() {
+    rayon::ThreadPoolBuilder::new().num_threads(3).build_global().unwrap();
+
     let stop = {
         let iui = UI::init().unwrap();
         let root = Counter {
@@ -95,7 +102,7 @@ fn main() {
         };
         let (tick, stop) = setup(
             root,
-            Duration::from_millis(5)
+            Duration::from_millis(15)
         );
         let mut ev = iui.event_loop();
         

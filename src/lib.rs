@@ -1,6 +1,8 @@
 #![feature(box_into_raw_non_null)]
 #![feature(fnbox)]
 
+// extern crate rayon;
+
 mod rc;
 pub use rc::*;
 
