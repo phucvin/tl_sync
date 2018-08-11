@@ -1,6 +1,7 @@
 use std::thread;
 use std::sync::mpsc;
 use std::boxed::FnBox;
+use std::time::{Instant, Duration};
 use super::*;
 
 #[derive(PartialEq)]
@@ -20,6 +21,7 @@ pub trait ComputeSetup {
 
 pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     root: T,
+    compute_update_duration: Duration,
 ) -> (Box<Fn()>, Box<FnBox()>) {
     init_dirties();
 
@@ -38,7 +40,8 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                 root.setup_compute();
                 loop {
                     let mut still_dirty = true;
-                    while still_dirty {
+                    let now = Instant::now();
+                    while still_dirty && now.elapsed() < compute_update_duration {
                         sync_from(2);
                         still_dirty = peek_notify() > 0;
                     }
