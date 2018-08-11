@@ -21,7 +21,6 @@ struct Controls {
 struct Counter {
     counter: Tl<Vec<usize>>,
     last_time: Tl<Instant>,
-    ev_test: Tl<Vec<()>>,
     iui: Trust<UI>,
     controls: Trust<RefCell<Option<Controls>>>,
     listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
@@ -39,10 +38,6 @@ impl UiSetup for Counter {
         let mut win = Window::new(&self.iui, "Counter", 400, 300, WindowType::NoMenubar);
 
         let btn_test = Button::new(&self.iui, "Click Me");
-        btn_test.on_clicked(&self.iui, {
-            let this = self.clone();
-            
-        });
         win.set_child(&self.iui, btn_test.clone());
 
         *self.controls.borrow_mut() = Some(Controls { btn_test });
@@ -61,24 +56,12 @@ impl UiSetup for Counter {
                     .set_text(&this.iui, &format!("Counter: {}", this.counter[0]));
             }
         })));
-
-        self.push(self.ev_test.register_listener(Box::new({
-            let this = self.clone();
-            move || {
-                println!("ev_test begin handle");
-                for _ in this.ev_test.iter() {
-                    println!(".");
-                }
-                println!("ev_test end handle");
-            }
-        })));
     }
 }
 
 impl ComputeSetup for Counter {
     fn setup_compute(&self) {
         self.counter.to_mut()[0] = 1;
-        self.ev_test.to_mut().push(());
 
         self.push(self.counter.register_listener(Box::new({
             // let this = self.clone();
@@ -90,7 +73,7 @@ impl ComputeSetup for Counter {
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
             move || {
-                if this.counter[0] < 25 {
+                if this.counter[0] < 250 {
                     // for it in this.counter.to_mut().iter_mut() {
                     //     *it += 1;
                     // }
@@ -98,15 +81,6 @@ impl ComputeSetup for Counter {
                         *it += 1;
                     });
                     *this.last_time.to_mut() = Instant::now();
-                }
-            }
-        })));
-
-        self.push(self.ev_test.register_listener(Box::new({
-            let this = self.clone();
-            move || {
-                if this.ev_test.len() > 0 {
-                    this.ev_test.to_mut().clear();
                 }
             }
         })));
@@ -124,7 +98,6 @@ fn main() {
         let root = Counter {
             counter: Tl::new(vec![0; 1024 * 1024 * 5]),
             last_time: Tl::new(Instant::now()),
-            ev_test: Tl::new(vec![]),
             iui: Trust::new(iui.clone()),
             controls: Trust::new(RefCell::new(None)),
             listeners: Default::default(),
