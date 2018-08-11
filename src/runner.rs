@@ -105,7 +105,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             ui_elapsed.subsec_millis(),
             compute_elapsed.subsec_millis(),
             sync_elapsed.subsec_millis(),
-            1000 / total_elapsed.subsec_millis(),
+            1000 / (total_elapsed.subsec_millis() + 1),
         );
     });
 
