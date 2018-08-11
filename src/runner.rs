@@ -82,16 +82,16 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         notify(prepared);
         let ui_elapsed = now.elapsed();
 
-        // if ui_elapsed > compute_update_duration {
-        //     let total_elapsed = now.elapsed();
-        //     println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
-        //         ui_elapsed.subsec_millis(),
-        //         0,
-        //         0,
-        //         1000 / (total_elapsed.subsec_millis() + 1),
-        //     );
-        //     return;
-        // }
+        if ui_elapsed > compute_update_duration {
+            // let total_elapsed = now.elapsed();
+            // println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",
+            //     ui_elapsed.subsec_millis(),
+            //     0,
+            //     0,
+            //     1000 / (total_elapsed.subsec_millis() + 1),
+            // );
+            return;
+        }
         match compute_rx.recv_timeout(compute_update_duration - ui_elapsed) {
             Ok(SyncStatus::Idle) => (),
             Ok(SyncStatus::Quit) => return,
