@@ -67,7 +67,7 @@ impl ComputeSetup for Counter {
         self.counter.to_mut()[0] = 1;
 
         self.push(self.counter.register_listener(Box::new({
-            let this = self.clone();
+            // let this = self.clone();
             move || {
                 // println!("compute thread | counter changed to: {}", this.counter[0]);
             }

@@ -28,7 +28,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     let (compute_tx, compute_rx) = mpsc::channel();
     let compute_rtx: mpsc::Sender<bool>;
 
-    let compute_thread = {
+    let _compute_thread = {
         let root = root.clone();
         let (tx, rx) = mpsc::channel();
         compute_rtx = tx.clone();
@@ -46,13 +46,19 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                         still_dirty = peek_notify() > 0;
                     }
 
-                    tx.send(SyncStatus::Idle).unwrap();
+                    match tx.send(SyncStatus::Idle) {
+                        Ok(_) => (),
+                        _ => break,
+                    }
                     match rx.recv() {
                         Ok(true) => (),
                         _ => break,
                     }
                     sync_to(0);
-                    tx.send(SyncStatus::JustSync).unwrap();
+                    match tx.send(SyncStatus::JustSync) {
+                        Ok(_) => (),
+                        _ => break,
+                    }
                 }
             }).unwrap()
     };
@@ -64,8 +70,6 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
 
         move || {
             compute_rtx.send(false).unwrap();
-            compute_thread.join().unwrap();
-
             prepare_notify();
             drop_dirties();
         }
