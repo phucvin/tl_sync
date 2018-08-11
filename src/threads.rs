@@ -1,7 +1,7 @@
 use std::thread;
 
-pub const THREADS: usize = 3;
-pub const MUTATE_THREAD_INDEX: usize = 2;
+pub const THREADS: usize = 2;
+pub const MUTATE_THREAD_INDEX: usize = 1;
 
 thread_local! {
     static CACHED_THREAD_INDEX: usize = match thread::current().name() {

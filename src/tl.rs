@@ -103,8 +103,9 @@ impl<T: Clone> Tl<T> {
         // TODO Find a way that flexible with thread,
         // but also not using std::mem::zeroed (error with Rc)
         let tmp1 = value.clone();
-        let tmp2 = value.clone();
-        let a = [value, tmp1, tmp2];
+        let a = [value, tmp1];
+        // let tmp2 = value.clone();
+        // let a = [value, tmp1, tmp2];
 
         Self {
             cell: Arc::new(TrustCell::new(a)),

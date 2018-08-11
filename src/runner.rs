@@ -35,14 +35,14 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         let tx = compute_tx.clone();
 
         thread::Builder::new()
-            .name("1_compute".into())
+            .name("compute".into())
             .spawn(move || {
                 root.setup_compute();
                 loop {
                     let mut still_dirty = true;
                     let now = Instant::now();
                     while still_dirty && now.elapsed() < compute_update_duration {
-                        sync_from(2);
+                        sync_from(MUTATE_THREAD_INDEX);
                         still_dirty = peek_notify() > 0;
                     }
 
@@ -54,7 +54,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                         Ok(true) => (),
                         _ => break,
                     }
-                    sync_to(0);
+                    // sync_to(0);
                     match tx.send(SyncStatus::JustSync) {
                         Ok(_) => (),
                         _ => break,
