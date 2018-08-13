@@ -17,6 +17,10 @@ enum Action {
     Todo,
 }
 
+fn fire(a: Action) {
+    tl_sync::fire(Box::new(a))
+}
+
 #[derive(Clone)]
 struct Counter {
     counter: Tl<Vec<usize>>,
@@ -39,7 +43,7 @@ impl UiSetup for Counter {
         let mut btn_test = Button::new(&self.iui, "Click Me");
         btn_test.on_clicked(&self.iui, {
             let this = self.clone();
-            move |_| fire(Box::new(Action::Click{ at_counter: this.counter[0] }))
+            move |_| fire(Action::Click{ at_counter: this.counter[0] })
         });
 
         self.push(self.counter.register_listener(Box::new({
