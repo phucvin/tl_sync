@@ -32,6 +32,8 @@ pub fn fire(action: Box<Any>) {
 }
 
 pub fn notify_actions<T: UiSetup + ComputeSetup>(root: &T, mask: u8) {
+    // TODO Should wait for lock, or wait for ui to handle actions first.
+    // Do below trick can cause out of order in notifying actions
     let mut actions = {
         let actions = get_actions();
         let mut actions = actions.lock().unwrap();
@@ -73,7 +75,7 @@ impl<T> Clone for ActionCreator<T> {
     }
 }
 
-impl<T> ActionCreator<T> {
+impl<T: 'static> ActionCreator<T> {
     pub fn new() -> Self {
         // TODO Find a way that flexible with thread,
         let a = [
@@ -90,7 +92,8 @@ impl<T> ActionCreator<T> {
 
     pub fn fire(&self, a: T) {
         self.queue.lock().unwrap().push((0, Box::new(a)));
-        // TODO mark as dirty (possible not notify enough ??)
+        // TODO mark dirty
+        // fire(Box::new(self.clone()));
     }
 
     // TODO Return drop handle
