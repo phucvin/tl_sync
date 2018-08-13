@@ -19,6 +19,7 @@ pub struct ListenerHandleRef {
 
 impl Drop for ListenerHandleRef {
     fn drop(&mut self) {
+        // TODO Incorrect, it maybe drop at different thread from registering
         let l = get_listeners().to_mut(thread_index());
         let mut is_zeroed = false;
 
