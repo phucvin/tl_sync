@@ -7,23 +7,16 @@ extern crate tl_sync;
 use iui::controls::Button;
 use iui::prelude::*;
 use rayon::prelude::*;
-use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::any::Any;
 use tl_sync::*;
 
 #[derive(Clone)]
-struct Controls {
-    btn_test: Button,
-}
-
-#[derive(Clone)]
 struct Counter {
     counter: Tl<Vec<usize>>,
     last_time: Tl<Instant>,
     iui: Trust<UI>,
-    controls: Trust<RefCell<Option<Controls>>>,
     listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
 }
 
@@ -43,24 +36,22 @@ impl UiSetup for Counter {
             let this = self.clone();
             move |_| fire(Box::new(this.counter[0]))
         });
-        win.set_child(&self.iui, btn_test.clone());
-
-        *self.controls.borrow_mut() = Some(Controls { btn_test });
-
-        win.show(&self.iui);
 
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
+            let mut btn_test = btn_test.clone();
             move || {
                 // let dt = Instant::now() - *this.last_time;
                 // println!("Compute's FPS: {}", 1000 / (dt.subsec_millis() + 1));
 
-                let mut controls = this.controls.borrow().clone().unwrap();
-                controls
-                    .btn_test
-                    .set_text(&this.iui, &format!("Counter: {}", this.counter[0]));
+                btn_test.set_text(&this.iui, &format!(
+                    "Counter: {}", this.counter[0]
+                ));
             }
         })));
+
+        win.set_child(&self.iui, btn_test);
+        win.show(&self.iui);
     }
 
     fn ui_act_on(&self, action: &Box<Any>) {
@@ -112,7 +103,6 @@ fn main() {
             counter: Tl::new(vec![0; 1024 * 1024 * 5]),
             last_time: Tl::new(Instant::now()),
             iui: Trust::new(iui.clone()),
-            controls: Trust::new(RefCell::new(None)),
             listeners: Default::default(),
         };
         let (tick, stop) = setup(root, Duration::from_millis(15));

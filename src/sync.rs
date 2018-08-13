@@ -5,7 +5,7 @@ use std::ptr;
 pub trait Dirty {
     fn sync(&self, from: usize, to: usize);
     fn get_ptr(&self) -> usize;
-    fn register_listener(&self, Box<Fn()>) -> ListenerHandleRef;
+    fn register_listener(&self, Box<FnMut()>) -> ListenerHandleRef;
     fn re_add(&self);
 }
 
@@ -46,7 +46,7 @@ impl Drop for ListenerHandleRef {
 
 // TODO Use context instead of static
 static mut DIRTIES: Option<TrustCell<Vec<(u8, Box<Dirty>)>>> = None;
-static mut LISTENERS: Option<TrustCell<HashMap<usize, Vec<(ListenerHandle, Box<Fn()>)>>>> = None;
+static mut LISTENERS: Option<TrustCell<HashMap<usize, Vec<(ListenerHandle, Box<FnMut()>)>>>> = None;
 
 pub fn init_dirties() {
     unsafe {
@@ -89,7 +89,7 @@ pub fn get_dirties<'a>() -> &'a TrustCell<Vec<(u8, Box<Dirty>)>> {
     }
 }
 
-pub fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<(ListenerHandle, Box<Fn()>)>>> {
+pub fn get_listeners<'a>() -> &'a TrustCell<HashMap<usize, Vec<(ListenerHandle, Box<FnMut()>)>>> {
     unsafe {
         match LISTENERS {
             Some(ref l) => l,
@@ -146,13 +146,13 @@ pub fn sync_from(from: usize) {
 
 pub fn notify(d: Vec<(u8, Box<Dirty>)>) {
     let to = thread_index();
-    let l = get_listeners().get(to);
+    let l = get_listeners().to_mut(to);
 
     // println!("NOTIFY -> {} : {}", to, d.len());
     d.iter().for_each(|it| {
         let ptr = it.1.get_ptr();
-        if let Some(l) = l.get(&ptr) {
-            l.iter().for_each(|it| it.1());
+        if let Some(l) = l.get_mut(&ptr) {
+            l.iter_mut().for_each(|it| it.1());
         }
     });
 }
@@ -168,7 +168,7 @@ pub fn prepare_notify() -> Vec<(u8, Box<Dirty>)> {
 
 pub fn peek_notify() -> usize {
     let to = thread_index();
-    let l = get_listeners().get(to);
+    let l = get_listeners().to_mut(to);
     let d = get_dirties().to_mut(to);
 
     // println!("PEEK NOTIFY -> {} : {}", to, d.len());
@@ -181,8 +181,8 @@ pub fn peek_notify() -> usize {
         }
 
         let ptr = it.1.get_ptr();
-        if let Some(l) = l.get(&ptr) {
-            l.iter().for_each(|it| it.1());
+        if let Some(l) = l.get_mut(&ptr) {
+            l.iter_mut().for_each(|it| it.1());
         }
 
         count += 1;

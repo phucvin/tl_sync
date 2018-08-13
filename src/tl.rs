@@ -71,7 +71,7 @@ impl<T: 'static + ManualCopy<T>> Dirty for Tl<T> {
         self.cell.arr.get() as usize
     }
 
-    fn register_listener(&self, f: Box<Fn()>) -> ListenerHandleRef {
+    fn register_listener(&self, f: Box<FnMut()>) -> ListenerHandleRef {
         let l = get_listeners().to_mut(thread_index());
         let ptr = self.get_ptr();
         if !l.contains_key(&ptr) {
