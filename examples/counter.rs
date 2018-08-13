@@ -12,6 +12,11 @@ use std::time::{Duration, Instant};
 use std::any::Any;
 use tl_sync::*;
 
+enum Action {
+    Click { at_counter: usize },
+    Todo,
+}
+
 #[derive(Clone)]
 struct Counter {
     counter: Tl<Vec<usize>>,
@@ -34,7 +39,7 @@ impl UiSetup for Counter {
         let mut btn_test = Button::new(&self.iui, "Click Me");
         btn_test.on_clicked(&self.iui, {
             let this = self.clone();
-            move |_| fire(Box::new(this.counter[0]))
+            move |_| fire(Box::new(Action::Click{ at_counter: this.counter[0] }))
         });
 
         self.push(self.counter.register_listener(Box::new({
@@ -55,7 +60,12 @@ impl UiSetup for Counter {
     }
 
     fn ui_act_on(&self, action: &Box<Any>) {
-        println!("ui_act_on {}", action.downcast_ref::<usize>().unwrap());
+        let action = action.downcast_ref::<Action>().unwrap();
+
+        match action {
+            &Action::Click { ref at_counter } => println!("ui_act_on Click at counter {}", at_counter),
+            _ => (),
+        }
     }
 }
 
@@ -87,7 +97,12 @@ impl ComputeSetup for Counter {
     }
 
     fn compute_act_on(&self, action: &Box<Any>) {
-        println!("compute_act_on {}", action.downcast_ref::<usize>().unwrap());
+        let action = action.downcast_ref::<Action>().unwrap();
+
+        match action {
+            &Action::Click { ref at_counter } => println!("compute_act_on Click at counter {}", at_counter),
+            _ => (),
+        }
     }
 }
 
