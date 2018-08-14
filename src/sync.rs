@@ -148,28 +148,6 @@ pub fn sync_from(from: usize) {
     // println!("SYNC {} <- {} : {:?}", to, from, v);
 }
 
-pub fn notify(d: Vec<(u8, Box<Dirty>)>) {
-    let to = thread_index();
-    let l = get_listeners().to_mut(to);
-
-    // println!("NOTIFY -> {} : {}", to, d.len());
-    d.iter().for_each(|it| {
-        let ptr = it.1.get_ptr();
-        if let Some(l) = l.get_mut(&ptr) {
-            l.iter_mut().for_each(|it| it.1());
-        }
-    });
-}
-
-pub fn prepare_notify() -> Vec<(u8, Box<Dirty>)> {
-    let to = thread_index();
-    let d = get_dirties().to_mut(to);
-    let mut tmp = vec![];
-
-    tmp.append(d);
-    tmp
-}
-
 pub fn peek_notify(d: Vec<usize>) -> usize {
     let to = thread_index();
     let l = get_listeners().to_mut(to);

@@ -80,7 +80,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
 
         move || {
             compute_rtx.send(false).unwrap();
-            prepare_notify();
+            prepare_peek_notify();
             drop_actions();
             drop_dirties();
         }
