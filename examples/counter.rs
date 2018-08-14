@@ -25,7 +25,6 @@ fn fire(a: Action) {
 struct Counter {
     counter: Tl<Vec<usize>>,
     last_time: Tl<Instant>,
-    ticks: Tl<u64>,
     iui: Trust<UI>,
     listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
 }
@@ -51,24 +50,12 @@ impl UiSetup for Counter {
             let this = self.clone();
             let mut btn_test = btn_test.clone();
             move || {
-                // let dt = Instant::now() - *this.last_time;
-                // println!("Compute's FPS: {}", 1000 / (dt.subsec_millis() + 1));
+                let dt = Instant::now() - *this.last_time;
+                println!("FPS: {}", 1000 / (dt.subsec_millis() + 1));
 
                 btn_test.set_text(&this.iui, &format!(
                     "Counter: {}", this.counter[0]
                 ));
-            }
-        })));
-
-        self.push(self.ticks.register_listener(Box::new({
-            let this = self.clone();
-            let mut last_ticks = 0;
-            move || {
-                let ticks = *this.ticks;
-                if ticks <= last_ticks { return; }
-                last_ticks = ticks;
-
-                println!("ticks: {}", last_ticks);
             }
         })));
 
@@ -88,14 +75,7 @@ impl UiSetup for Counter {
 
 impl ComputeSetup for Counter {
     fn setup_compute(&self) {
-        self.counter.to_mut()[0] = 1;
-
-        self.push(self.counter.register_listener(Box::new({
-            // let this = self.clone();
-            move || {
-                // println!("compute thread | counter changed to: {}", this.counter[0]);
-            }
-        })));
+        self.counter.to_mut()[0] = 0;
 
         self.push(self.counter.register_listener(Box::new({
             let this = self.clone();
@@ -107,20 +87,7 @@ impl ComputeSetup for Counter {
                     this.counter.to_mut().par_iter_mut().for_each(|it| {
                         *it += 1;
                     });
-                    *this.last_time.to_mut() = Instant::now();
                 }
-            }
-        })));
-
-        self.push(self.ticks.register_listener(Box::new({
-            let this = self.clone();
-            let mut last_ticks = 0;
-            move || {
-                let ticks = *this.ticks;
-                if ticks <= last_ticks { return; }
-
-                // println!("delta ticks from compute: {}", ticks - last_ticks);
-                last_ticks = ticks;
             }
         })));
     }
@@ -146,7 +113,6 @@ fn main() {
         let root = Counter {
             counter: Tl::new(vec![0; 1024 * 1024 * 5]),
             last_time: Tl::new(Instant::now()),
-            ticks: Tl::new(0),
             iui: Trust::new(iui.clone()),
             listeners: Default::default(),
         };
@@ -154,8 +120,8 @@ fn main() {
         let mut ev = iui.event_loop();
 
         ev.on_tick(&iui, move || {
+            *root.last_time.to_mut() = Instant::now();
             tick();
-            *root.ticks.to_mut() += 1;
         });
 
         // ev.run(&iui);
