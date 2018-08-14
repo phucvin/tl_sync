@@ -17,10 +17,15 @@ struct Click {
     counter_at: usize,
 }
 
+struct Toast {
+    message: String,
+}
+
 #[derive(Clone)]
 struct Counter {
     counter: Tl<Vec<usize>>,
     on_click: Action<Click>,
+    do_toast: Action<Toast>,
     time: Tl<Instant>,
     last_time: Tl<Instant>,
     ticks: Tl<u64>,
@@ -65,10 +70,10 @@ impl UiSetup for Counter {
             }
         });
 
-        self.register_listener(&self.on_click, {
+        self.register_listener(&self.do_toast, {
             let this = self.clone();
             move || {
-                println!("ui on_click: {}", this.on_click.len());
+                println!("ui do_toast: {}, {}", this.do_toast[0].message, this.counter[0]);
             }
         });
 
@@ -99,6 +104,7 @@ impl ComputeSetup for Counter {
             let this = self.clone();
             move || {
                 println!("compute on_click: {}", this.on_click[0].counter_at);
+                this.do_toast.fire(Toast { message: format!("Hello {}", this.counter[0]).into() });
             }
         });
     }
@@ -115,6 +121,7 @@ fn main() {
         let root = Counter {
             counter: Tl::new(vec![0; 1024 * 1024 * 5]),
             on_click: Action::new(),
+            do_toast: Action::new(),
             time: Tl::new(Instant::now()),
             last_time: Tl::new(Instant::now()),
             ticks: Tl::new(0),
