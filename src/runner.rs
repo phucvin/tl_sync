@@ -3,7 +3,6 @@ use std::boxed::FnBox;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
-use std::any::Any;
 
 #[derive(PartialEq)]
 enum SyncStatus {
@@ -13,12 +12,10 @@ enum SyncStatus {
 
 pub trait UiSetup {
     fn setup_ui(&self);
-    fn ui_act_on(&self, &Box<Any>);
 }
 
 pub trait ComputeSetup {
     fn setup_compute(&self);
-    fn compute_act_on(&self, &Box<Any>);
 }
 
 pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
@@ -26,7 +23,6 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     compute_update_duration: Duration,
 ) -> (Box<FnMut()>, Box<FnBox()>) {
     init_dirties();
-    init_actions();
 
     let (compute_tx, compute_rx) = mpsc::channel();
     let compute_rtx: mpsc::Sender<bool>;
@@ -42,8 +38,6 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             .spawn(move || {
                 root.setup_compute();
                 loop {
-                    notify_actions(&root, 2);
-
                     let mut still_dirty = true;
                     let now = Instant::now();
                     while still_dirty && now.elapsed() < compute_update_duration {
@@ -81,7 +75,6 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         move || {
             compute_rtx.send(false).unwrap();
             prepare_peek_notify();
-            drop_actions();
             drop_dirties();
         }
     });
@@ -101,10 +94,8 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         }
         
         peek_notify(prepared);
-        notify_actions(&root, 1);
 
         let ui_elapsed = now.elapsed();
-
         if ui_elapsed > compute_update_duration {
             // let total_elapsed = now.elapsed();
             // println!("UI: {}ms \t | COM: | {}ms\t | SYNC: | {}ms\t | FPS: {}",

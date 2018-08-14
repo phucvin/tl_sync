@@ -9,19 +9,9 @@ use iui::prelude::*;
 use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use std::any::Any;
 use std::cell::Cell;
 use std::rc::Rc;
 use tl_sync::*;
-
-enum Action {
-    Click { at_counter: usize },
-    Todo,
-}
-
-fn fire(a: Action) {
-    tl_sync::fire(Box::new(a))
-}
 
 #[derive(Clone)]
 struct Counter {
@@ -47,7 +37,9 @@ impl UiSetup for Counter {
         let mut btn_test = Button::new(&self.iui, "Click Me");
         btn_test.on_clicked(&self.iui, {
             let this = self.clone();
-            move |_| fire(Action::Click{ at_counter: this.counter[0] })
+            move |_| {
+                // TODO
+            }
         });
 
         self.register_listener(&self.counter, {
@@ -71,15 +63,6 @@ impl UiSetup for Counter {
         win.set_child(&self.iui, btn_test);
         win.show(&self.iui);
     }
-
-    fn ui_act_on(&self, action: &Box<Any>) {
-        let action = action.downcast_ref::<Action>().unwrap();
-
-        match action {
-            &Action::Click { ref at_counter } => println!("ui_act_on Click at counter {}", at_counter),
-            _ => (),
-        }
-    }
 }
 
 impl ComputeSetup for Counter {
@@ -99,15 +82,6 @@ impl ComputeSetup for Counter {
                 }
             }
         });
-    }
-
-    fn compute_act_on(&self, action: &Box<Any>) {
-        let action = action.downcast_ref::<Action>().unwrap();
-
-        match action {
-            &Action::Click { ref at_counter } => println!("compute_act_on Click at counter {}", at_counter),
-            _ => (),
-        }
     }
 }
 
