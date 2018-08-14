@@ -18,9 +18,6 @@ pub use manual_copy::*;
 mod tl;
 pub use tl::*;
 
-mod stl;
-pub use stl::*;
-
 mod sync;
 pub use sync::*;
 
