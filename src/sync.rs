@@ -111,7 +111,7 @@ pub fn sync_to(to: usize) {
 
     // let mut v = vec![];
     tmp.iter_mut().for_each(|it| {
-        if it.0 == 4 { return; }
+        if it.0 >= 4 { return; }
 
         it.1.sync(from, to);
 
@@ -122,7 +122,7 @@ pub fn sync_to(to: usize) {
         it.0 = 2;
         // v.push(it.1.get_ptr());
     });
-    tmp.retain(|it| it.0 != 4);
+    tmp.retain(|it| it.0 < 4);
     tmp.iter_mut().for_each(|it| it.0 = 4);
     // println!("SYNC {} -> {} : {:?}", from, to, v);
 
@@ -174,6 +174,8 @@ pub fn prepare_peek_notify() -> Vec<usize> {
             } else {
                 it.0 = 3;
             }
+        } else {
+            it.0 = 5;
         }
 
         tmp.push(it.1.get_ptr());

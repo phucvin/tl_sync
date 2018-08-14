@@ -62,6 +62,28 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
 
         self.cell.to_mut(MUTATE_THREAD_INDEX)
     }
+
+    pub fn to_mut_advanced(&self) -> &mut T {
+        {
+            let d = get_dirties().to_mut(thread_index());
+            let tmp = Box::new(self.clone());
+            let ptr = tmp.cell.arr.get();
+            let mut is_unique = true;
+
+            for it in d.iter_mut() {
+                if it.1.get_ptr() == ptr as usize {
+                    is_unique = false;
+                    break;
+                }
+            }
+
+            if is_unique {
+                d.push((2, tmp));
+            }
+        }
+
+        self.cell.to_mut(thread_index())
+    }
 }
 
 impl<T: 'static + ManualCopy<T>> RegisterListener for Tl<T> {

@@ -90,8 +90,10 @@ impl ComputeSetup for Counter {
 
         self.register_listener(&self.on_click, {
             let this = self.clone();
+            let mut i = 0;
             move || {
-                println!("{}", this.on_click[0].counter_at);
+                println!("compute on_click: {}, {}, {}", this.on_click[0].counter_at, i, std::thread::current().name().unwrap());
+                i += 1;
             }
         });
     }
