@@ -91,6 +91,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     let tick = Box::new(move || {
         let now = Instant::now();
 
+        sync_from(2);
         let prepared = prepare_peek_notify();
 
         if just_sync {
@@ -101,7 +102,6 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         
         peek_notify(prepared);
         notify_actions(&root, 1);
-        sync_from(2);
 
         let ui_elapsed = now.elapsed();
 
