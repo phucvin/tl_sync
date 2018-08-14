@@ -124,11 +124,6 @@ pub fn sync_to(to: usize) {
     // println!("SYNC {} -> {} : {:?}", from, to, v);
 
     let dt = get_dirties().to_mut(to);
-    // TODO Consider allow remain dirties in case ui thread take too long
-    // assert!(
-    //     dt.len() == 0,
-    //     format!("Should notify before sync {} -> {} : {}", from, to, dt.len())
-    // );
     dt.append(&mut tmp);
 }
 
