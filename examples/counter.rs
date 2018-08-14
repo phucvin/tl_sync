@@ -10,6 +10,8 @@ use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::any::Any;
+use std::cell::Cell;
+use std::rc::Rc;
 use tl_sync::*;
 
 enum Action {
@@ -24,15 +26,17 @@ fn fire(a: Action) {
 #[derive(Clone)]
 struct Counter {
     counter: Tl<Vec<usize>>,
+    time: Tl<Instant>,
     last_time: Tl<Instant>,
+    ticks: Tl<u64>,
     iui: Trust<UI>,
     listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
 }
 
 impl Counter {
-    fn push(&self, handle_ref: ListenerHandleRef) {
-        let mut v = self.listeners.lock().unwrap();
-        v.push(handle_ref);
+    fn register_listener<T: Dirty, U: 'static + FnMut()>(&self, v: &T, f: U) {
+        let mut l = self.listeners.lock().unwrap();
+        l.push(v.register_listener(Box::new(f)));
     }
 }
 
@@ -46,18 +50,23 @@ impl UiSetup for Counter {
             move |_| fire(Action::Click{ at_counter: this.counter[0] })
         });
 
-        self.push(self.counter.register_listener(Box::new({
+        self.register_listener(&self.counter, {
             let this = self.clone();
             let mut btn_test = btn_test.clone();
+            let last_ticks = Rc::new(Cell::new(0));
+
             move || {
-                let dt = Instant::now() - *this.last_time;
+                if *this.ticks <= last_ticks.get() { return; }
+                last_ticks.set(*this.ticks);
+
+                let dt = *this.time - *this.last_time;
                 println!("FPS: {}", 1000 / (dt.subsec_millis() + 1));
 
                 btn_test.set_text(&this.iui, &format!(
                     "Counter: {}", this.counter[0]
                 ));
             }
-        })));
+        });
 
         win.set_child(&self.iui, btn_test);
         win.show(&self.iui);
@@ -77,7 +86,7 @@ impl ComputeSetup for Counter {
     fn setup_compute(&self) {
         self.counter.to_mut()[0] = 0;
 
-        self.push(self.counter.register_listener(Box::new({
+        self.register_listener(&self.counter, {
             let this = self.clone();
             move || {
                 if this.counter[0] < 250 {
@@ -89,7 +98,7 @@ impl ComputeSetup for Counter {
                     });
                 }
             }
-        })));
+        });
     }
 
     fn compute_act_on(&self, action: &Box<Any>) {
@@ -112,7 +121,9 @@ fn main() {
         let iui = UI::init().unwrap();
         let root = Counter {
             counter: Tl::new(vec![0; 1024 * 1024 * 5]),
+            time: Tl::new(Instant::now()),
             last_time: Tl::new(Instant::now()),
+            ticks: Tl::new(0),
             iui: Trust::new(iui.clone()),
             listeners: Default::default(),
         };
@@ -120,7 +131,9 @@ fn main() {
         let mut ev = iui.event_loop();
 
         ev.on_tick(&iui, move || {
-            *root.last_time.to_mut() = Instant::now();
+            *root.last_time.to_mut() = *root.time;
+            *root.time.to_mut() = Instant::now();
+            *root.ticks.to_mut() += 1;
             tick();
         });
 
