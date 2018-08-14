@@ -20,6 +20,27 @@ struct Counter {
 }
 
 impl Counter {
+    fn new(iui: UI) -> Self {
+        Self {
+            value: Tl::new(0),
+            on_inc: Action::new(),
+            on_dec: Action::new(),
+            iui: Trust::new(iui),
+            listeners: Default::default(),
+        }
+    }
+
+    fn setup(&self) {
+        let this = self.clone();
+        let f = move || {
+            let value = this.value.to_mut();
+            *value += this.on_inc.len() as isize;
+            *value -= this.on_dec.len() as isize;
+        };
+        self.register_listener(&self.on_inc, f.clone());
+        self.register_listener(&self.on_dec, f.clone());
+    }
+
     fn register_listener<T: RegisterListener, U: 'static + FnMut()>(&self, v: &T, f: U) {
         let mut l = self.listeners.lock().unwrap();
         l.push(v.register_listener(Box::new(f)));
@@ -67,43 +88,16 @@ impl UiSetup for Counter {
 
 impl ComputeSetup for Counter {
     fn setup_compute(&self) {
-        // self.register_listener(&self.on_inc, {
-        //     let this = self.clone();
-        //     move || {
-        //         *this.value.to_mut() += this.on_inc.len() as isize;
-        //     }
-        // });
-
-        // self.register_listener(&self.on_dec, {
-        //     let this = self.clone();
-        //     move || {
-        //         *this.value.to_mut() -= this.on_dec.len() as isize;
-        //     }
-        // });
-
-        {
-            let this = self.clone();
-            let f = move || {
-                let value = this.value.to_mut();
-                *value += this.on_inc.len() as isize;
-                *value -= this.on_dec.len() as isize;
-            };
-            self.register_listener(&self.on_inc, f.clone());
-            self.register_listener(&self.on_dec, f.clone());
-        }
+        self.setup();
     }
 }
 
 fn main() {
     let stop = {
+        init_dirties();
+
         let iui = UI::init().unwrap();
-        let root = Counter {
-            value: Tl::new(0),
-            on_inc: Action::new(),
-            on_dec: Action::new(),
-            iui: Trust::new(iui.clone()),
-            listeners: Default::default(),
-        };
+        let root = Counter::new(iui.clone());
         let (mut tick, stop) = setup(root.clone(), Duration::from_millis(15));
         let mut ev = iui.event_loop();
 
