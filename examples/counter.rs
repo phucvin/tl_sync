@@ -107,7 +107,7 @@ impl ComputeSetup for Counter {
                     this.counter.to_mut().par_iter_mut().for_each(|it| {
                         *it += 1;
                     });
-                    // *this.last_time.to_mut() = Instant::now();
+                    *this.last_time.to_mut() = Instant::now();
                 }
             }
         })));
@@ -118,9 +118,9 @@ impl ComputeSetup for Counter {
             move || {
                 let ticks = *this.ticks;
                 if ticks <= last_ticks { return; }
-                last_ticks = ticks;
 
-                println!("ticks from compute: {}", last_ticks);
+                // println!("delta ticks from compute: {}", ticks - last_ticks);
+                last_ticks = ticks;
             }
         })));
     }
@@ -155,7 +155,7 @@ fn main() {
 
         ev.on_tick(&iui, move || {
             tick();
-            // *root.ticks.to_mut() += 1;
+            *root.ticks.to_mut() += 1;
         });
 
         // ev.run(&iui);
