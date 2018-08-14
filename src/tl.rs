@@ -72,13 +72,14 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
 
             for it in d.iter_mut() {
                 if it.1.get_ptr() == ptr as usize {
+                    it.0 = 3;
                     is_unique = false;
                     break;
                 }
             }
 
             if is_unique {
-                d.push((2, tmp));
+                d.push((3, tmp));
             }
         }
 
