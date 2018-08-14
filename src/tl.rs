@@ -44,6 +44,8 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
                 if it.1.get_ptr() == ptr as usize {
                     if it.0 == 1 {
                         panic!("Only allow one mutation each sync {}, {}", it.0, ptr as usize);
+                    } if it.0 == 4 {
+                        panic!("Only allow mutation from 1 thread {}, {}", it.0, ptr as usize);
                     } else {
                         it.0 = 1;
                     }
