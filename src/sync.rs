@@ -2,10 +2,13 @@ use super::*;
 use std::collections::HashMap;
 use std::ptr;
 
-pub trait Dirty {
+pub trait RegisterListener {
+    fn register_listener(&self, Box<FnMut()>) -> ListenerHandleRef;
+}
+
+pub trait Dirty: RegisterListener {
     fn sync(&self, from: usize, to: usize);
     fn get_ptr(&self) -> usize;
-    fn register_listener(&self, Box<FnMut()>) -> ListenerHandleRef;
     fn re_add(&self);
 }
 

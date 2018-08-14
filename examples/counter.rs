@@ -13,9 +13,14 @@ use std::cell::Cell;
 use std::rc::Rc;
 use tl_sync::*;
 
+struct Click {
+    counter_at: usize,
+}
+
 #[derive(Clone)]
 struct Counter {
     counter: Tl<Vec<usize>>,
+    on_click: Action<Click>,
     time: Tl<Instant>,
     last_time: Tl<Instant>,
     ticks: Tl<u64>,
@@ -24,7 +29,7 @@ struct Counter {
 }
 
 impl Counter {
-    fn register_listener<T: Dirty, U: 'static + FnMut()>(&self, v: &T, f: U) {
+    fn register_listener<T: RegisterListener, U: 'static + FnMut()>(&self, v: &T, f: U) {
         let mut l = self.listeners.lock().unwrap();
         l.push(v.register_listener(Box::new(f)));
     }
@@ -38,7 +43,7 @@ impl UiSetup for Counter {
         btn_test.on_clicked(&self.iui, {
             let this = self.clone();
             move |_| {
-                // TODO
+                this.on_click.fire(Click { counter_at: this.counter[0] });
             }
         });
 
@@ -51,8 +56,8 @@ impl UiSetup for Counter {
                 if *this.ticks <= last_ticks.get() { return; }
                 last_ticks.set(*this.ticks);
 
-                let dt = *this.time - *this.last_time;
-                println!("FPS: {}", 1000 / (dt.subsec_millis() + 1));
+                // let dt = *this.time - *this.last_time;
+                // println!("FPS: {}", 1000 / (dt.subsec_millis() + 1));
 
                 btn_test.set_text(&this.iui, &format!(
                     "Counter: {}", this.counter[0]
@@ -82,6 +87,13 @@ impl ComputeSetup for Counter {
                 }
             }
         });
+
+        self.register_listener(&self.on_click, {
+            let this = self.clone();
+            move || {
+                println!("{}", this.on_click[0].counter_at);
+            }
+        });
     }
 }
 
@@ -95,6 +107,7 @@ fn main() {
         let iui = UI::init().unwrap();
         let root = Counter {
             counter: Tl::new(vec![0; 1024 * 1024 * 5]),
+            on_click: Action::new(),
             time: Tl::new(Instant::now()),
             last_time: Tl::new(Instant::now()),
             ticks: Tl::new(0),

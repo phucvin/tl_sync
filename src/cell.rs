@@ -26,7 +26,7 @@ impl<T> TrustCell<T> {
 impl<T: ManualCopy<T>> TrustCell<T> {
     pub fn inner_manual_copy(&self, from: usize, to: usize) {
         unsafe {
-            (&mut *self.arr.get())[to].copy_from(&(&*self.arr.get())[from]);
+            (&mut *self.arr.get())[to].copy_from(&mut (&mut *self.arr.get())[from]);
         }
     }
 }

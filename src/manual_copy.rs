@@ -3,42 +3,42 @@ use std::time::Instant;
 // use rayon::prelude::*;
 
 pub trait ManualCopy<T> {
-    fn copy_from(&mut self, &T);
+    fn copy_from(&mut self, &mut T);
 }
 
 impl ManualCopy<u8> for u8 {
-    fn copy_from(&mut self, other: &u8) {
+    fn copy_from(&mut self, other: &mut u8) {
         *self = *other;
     }
 }
 
 impl ManualCopy<u64> for u64 {
-    fn copy_from(&mut self, other: &u64) {
+    fn copy_from(&mut self, other: &mut u64) {
         *self = *other;
     }
 }
 
 impl ManualCopy<usize> for usize {
-    fn copy_from(&mut self, other: &usize) {
+    fn copy_from(&mut self, other: &mut usize) {
         *self = *other;
     }
 }
 
 impl ManualCopy<Instant> for Instant {
-    fn copy_from(&mut self, other: &Instant) {
+    fn copy_from(&mut self, other: &mut Instant) {
         *self = *other;
     }
 }
 
 impl ManualCopy<String> for String {
-    fn copy_from(&mut self, other: &String) {
+    fn copy_from(&mut self, other: &mut String) {
         self.clear();
         self.push_str(other);
     }
 }
 
 impl<T: Clone> ManualCopy<Option<T>> for Option<T> {
-    fn copy_from(&mut self, other: &Option<T>) {
+    fn copy_from(&mut self, other: &mut Option<T>) {
         *self = match *other {
             None => None,
             Some(ref v) => Some(v.clone()),
@@ -47,7 +47,7 @@ impl<T: Clone> ManualCopy<Option<T>> for Option<T> {
 }
 
 impl<T1: Clone, T2: Clone> ManualCopy<(T1, T2)> for (T1, T2) {
-    fn copy_from(&mut self, other: &(T1, T2)) {
+    fn copy_from(&mut self, other: &mut (T1, T2)) {
         // TODO If U: copy, try to use memcpy (=)
         self.0 = other.0.clone();
         self.1 = other.1.clone();
@@ -55,7 +55,7 @@ impl<T1: Clone, T2: Clone> ManualCopy<(T1, T2)> for (T1, T2) {
 }
 
 impl<U: Send + Sync + Clone> ManualCopy<Vec<U>> for Vec<U> {
-    fn copy_from(&mut self, other: &Vec<U>) {
+    fn copy_from(&mut self, other: &mut Vec<U>) {
         // TODO If U: Copy, try to use memcpy (copy_from_slice)
         let slen = self.len();
         let olen = other.len();

@@ -64,15 +64,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
     }
 }
 
-impl<T: 'static + ManualCopy<T>> Dirty for Tl<T> {
-    fn sync(&self, from: usize, to: usize) {
-        self.cell.inner_manual_copy(from, to);
-    }
-
-    fn get_ptr(&self) -> usize {
-        self.cell.arr.get() as usize
-    }
-
+impl<T: 'static + ManualCopy<T>> RegisterListener for Tl<T> {
     fn register_listener(&self, f: Box<FnMut()>) -> ListenerHandleRef {
         let l = get_listeners().to_mut(thread_index());
         let ptr = self.get_ptr();
@@ -87,6 +79,16 @@ impl<T: 'static + ManualCopy<T>> Dirty for Tl<T> {
         ListenerHandleRef {
             handle: &l[l.len() - 1].0,
         }
+    }
+}
+
+impl<T: 'static + ManualCopy<T>> Dirty for Tl<T> {
+    fn sync(&self, from: usize, to: usize) {
+        self.cell.inner_manual_copy(from, to);
+    }
+
+    fn get_ptr(&self) -> usize {
+        self.cell.arr.get() as usize
     }
 
     fn re_add(&self) {
@@ -108,6 +110,14 @@ impl<T: Clone> Tl<T> {
         let tmp2 = value.clone();
         let a = [value, tmp1, tmp2];
 
+        Self {
+            cell: Arc::new(TrustCell::new(a)),
+        }
+    }
+}
+
+impl<T> Tl<T> {
+    pub fn new_advanced(a: [T; THREADS]) -> Self {
         Self {
             cell: Arc::new(TrustCell::new(a)),
         }
