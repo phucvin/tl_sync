@@ -65,6 +65,13 @@ impl UiSetup for Counter {
             }
         });
 
+        self.register_listener(&self.on_click, {
+            let this = self.clone();
+            move || {
+                println!("ui on_click: {}", this.on_click.len());
+            }
+        });
+
         win.set_child(&self.iui, btn_test);
         win.show(&self.iui);
     }
