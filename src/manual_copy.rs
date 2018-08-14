@@ -12,6 +12,12 @@ impl ManualCopy<u8> for u8 {
     }
 }
 
+impl ManualCopy<u64> for u64 {
+    fn copy_from(&mut self, other: &u64) {
+        *self = *other;
+    }
+}
+
 impl ManualCopy<usize> for usize {
     fn copy_from(&mut self, other: &usize) {
         *self = *other;

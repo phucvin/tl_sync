@@ -43,7 +43,7 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
             for it in d.iter_mut() {
                 if it.1.get_ptr() == ptr as usize {
                     if it.0 == 1 {
-                        panic!("Only allow one mutation each sync");
+                        panic!("Only allow one mutation each sync {}, {}", it.0, ptr as usize);
                     } else {
                         it.0 = 1;
                     }

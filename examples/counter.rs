@@ -25,6 +25,7 @@ fn fire(a: Action) {
 struct Counter {
     counter: Tl<Vec<usize>>,
     last_time: Tl<Instant>,
+    ticks: Tl<u64>,
     iui: Trust<UI>,
     listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
 }
@@ -56,6 +57,18 @@ impl UiSetup for Counter {
                 btn_test.set_text(&this.iui, &format!(
                     "Counter: {}", this.counter[0]
                 ));
+            }
+        })));
+
+        self.push(self.ticks.register_listener(Box::new({
+            let this = self.clone();
+            let mut last_ticks = 0;
+            move || {
+                let ticks = *this.ticks;
+                if ticks <= last_ticks { return; }
+                last_ticks = ticks;
+
+                println!("ticks: {}", last_ticks);
             }
         })));
 
@@ -94,8 +107,20 @@ impl ComputeSetup for Counter {
                     this.counter.to_mut().par_iter_mut().for_each(|it| {
                         *it += 1;
                     });
-                    *this.last_time.to_mut() = Instant::now();
+                    // *this.last_time.to_mut() = Instant::now();
                 }
+            }
+        })));
+
+        self.push(self.ticks.register_listener(Box::new({
+            let this = self.clone();
+            let mut last_ticks = 0;
+            move || {
+                let ticks = *this.ticks;
+                if ticks <= last_ticks { return; }
+                last_ticks = ticks;
+
+                println!("ticks from compute: {}", last_ticks);
             }
         })));
     }
@@ -121,13 +146,17 @@ fn main() {
         let root = Counter {
             counter: Tl::new(vec![0; 1024 * 1024 * 5]),
             last_time: Tl::new(Instant::now()),
+            ticks: Tl::new(0),
             iui: Trust::new(iui.clone()),
             listeners: Default::default(),
         };
-        let (tick, stop) = setup(root, Duration::from_millis(15));
+        let (mut tick, stop) = setup(root.clone(), Duration::from_millis(15));
         let mut ev = iui.event_loop();
 
-        ev.on_tick(&iui, move || tick());
+        ev.on_tick(&iui, move || {
+            tick();
+            // *root.ticks.to_mut() += 1;
+        });
 
         // ev.run(&iui);
         loop {

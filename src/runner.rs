@@ -24,7 +24,7 @@ pub trait ComputeSetup {
 pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     root: T,
     compute_update_duration: Duration,
-) -> (Box<Fn()>, Box<FnBox()>) {
+) -> (Box<FnMut()>, Box<FnBox()>) {
     init_dirties();
     init_actions();
 
@@ -48,7 +48,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                     let now = Instant::now();
                     while still_dirty && now.elapsed() < compute_update_duration {
                         sync_from(2);
-                        still_dirty = peek_notify() > 0;
+                        still_dirty = peek_notify(prepare_peek_notify()) > 0;
                     }
 
                     match tx.send(SyncStatus::Idle) {
@@ -62,6 +62,11 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                     sync_to(0);
                     match tx.send(SyncStatus::JustSync) {
                         Ok(_) => (),
+                        _ => break,
+                    }
+
+                    match rx.recv() {
+                        Ok(true) => (),
                         _ => break,
                     }
                 }
@@ -81,13 +86,22 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         }
     });
 
+    let mut just_sync = false;
+
     let tick = Box::new(move || {
         let now = Instant::now();
 
-        let prepared = prepare_notify();
-        notify(prepared);
+        let prepared = prepare_peek_notify();
 
+        if just_sync {
+            just_sync = false;
+            sync_to(1);
+            compute_rtx.send(true).unwrap();
+        }
+        
+        peek_notify(prepared);
         notify_actions(&root, 1);
+        sync_from(2);
 
         let ui_elapsed = now.elapsed();
 
@@ -129,6 +143,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             Ok(SyncStatus::JustSync) => (),
             _ => panic!("Unexpected error on ticker"),
         }
+        just_sync = true;
         // let sync_elapsed = now.elapsed() - ui_elapsed - compute_elapsed;
 
         let total_elapsed = now.elapsed();

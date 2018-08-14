@@ -1,5 +1,6 @@
 #![feature(box_into_raw_non_null)]
 #![feature(fnbox)]
+#![feature(drain_filter)]
 
 // extern crate rayon;
 
