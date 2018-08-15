@@ -32,7 +32,6 @@ impl Counter {
 
     fn setup(&self) {
         let this = self.clone();
-        // TODO Fix bug after inc, cannot dec
         let f = move || {
             let value = this.value.to_mut();
             *value += this.on_inc.len() as isize;
@@ -67,6 +66,7 @@ impl UiSetup for Counter {
             let this = self.clone();
             move |_| {
                 this.on_dec.fire(());
+                this.on_inc.fire(());
             }
         });
 
