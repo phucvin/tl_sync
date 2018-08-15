@@ -45,11 +45,6 @@ impl Counter {
         let mut l = self.listeners.lock().unwrap();
         l.push(h);
     }
-
-    // fn register_listener<T1: GetPtr, T2: GetPtr, U: 'static + FnMut()>(&self, t1: &T1, t2: &T2, f: U) {
-    //     let mut l = self.listeners.lock().unwrap();
-    //     l.push(register_listener(t1, t2, Box::new(f)));
-    // }
 }
 
 impl UiSetup for Counter {

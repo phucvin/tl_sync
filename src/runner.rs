@@ -125,9 +125,6 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         }
         // let compute_elapsed = now.elapsed() - ui_elapsed;
 
-        // TODO Check if current remaining time is enough to sync, before send
-        // if not, can postpone this sync to next tick,
-        // remember not recv from compute_rx in that next tick
         compute_rtx.send(true).unwrap();
         // Should not recv_timeout here
         // must wait until receive JustSync before continue,
