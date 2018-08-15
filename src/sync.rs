@@ -19,14 +19,13 @@ pub struct ListenerHandle {
 }
 
 pub struct ListenerHandleRef {
-    // pub handle: &'static ListenerHandle,
     pub handles: Vec<&'static ListenerHandle>,
+    from: usize,
 }
 
 impl Drop for ListenerHandleRef {
     fn drop(&mut self) {
-        // TODO Incorrect, it maybe drop at different thread from registering
-        let l = get_listeners().to_mut(thread_index());
+        let l = get_listeners().to_mut(self.from);
 
         for handle in self.handles.iter() {
             let mut is_zeroed = false;
@@ -77,7 +76,10 @@ where
 
     f();
 
-    ListenerHandleRef { handles: vec![h1] }
+    ListenerHandleRef {
+        handles: vec![h1],
+        from: thread_index(),
+    }
 }
 
 pub fn register_listener_2<T1, T2, F>(t1: &T1, t2: &T2, mut f: F) -> ListenerHandleRef
@@ -120,6 +122,7 @@ where
 
     ListenerHandleRef {
         handles: vec![h1, h2],
+        from: thread_index(),
     }
 }
 
