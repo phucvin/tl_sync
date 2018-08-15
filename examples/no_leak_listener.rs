@@ -43,7 +43,17 @@ fn main() {
                 .name("1_test".into())
                 .spawn(move || {
                     *container.thing.to_mut() = "orange".into();
+
+                    container.listeners.lock().unwrap().push(register_listener_1(&container.thing, {
+                        let container = container.clone_weak();
+
+                        move || {
+                            println!("thing changed to: {}", *container.thing);
+                        }
+                    }));
+
                     sync_from(2);
+                    peek_notify(prepare_peek_notify());
                     sync_to(0);
                 }).unwrap()
         };

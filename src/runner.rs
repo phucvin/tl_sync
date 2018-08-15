@@ -27,7 +27,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
     let (compute_tx, compute_rx) = mpsc::channel();
     let compute_rtx: mpsc::Sender<bool>;
 
-    let _compute_thread = {
+    let compute_thread = {
         let root = root.clone();
         let (tx, rx) = mpsc::channel();
         compute_rtx = tx.clone();
@@ -75,6 +75,8 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
 
         move || {
             compute_rtx.send(false).unwrap();
+            compute_thread.join().unwrap();
+            
             prepare_peek_notify();
             drop_dirties();
         }
