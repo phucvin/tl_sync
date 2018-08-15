@@ -74,6 +74,7 @@ impl UiSetup for Counter {
             move |_| {
                 this.on_dec.fire(());
                 this.on_inc.fire(());
+                this.on_dec.fire(());
             }
         });
 
