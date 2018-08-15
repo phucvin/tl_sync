@@ -39,14 +39,20 @@ impl Counter {
         };
         // TODO Register multiple fields, actions to single listener
         // and call only once, event multiple things changed
-        self.register_listener(&self.on_inc, f.clone());
-        self.register_listener(&self.on_dec, f.clone());
+        self.defer(register_listener_1(&self.on_inc, f.clone()));
+        self.defer(register_listener_1(&self.on_dec, f.clone()));
     }
 
-    fn register_listener<T: RegisterListener, U: 'static + FnMut()>(&self, v: &T, f: U) {
+    fn defer(&self, h: ListenerHandleRef)
+    {
         let mut l = self.listeners.lock().unwrap();
-        l.push(v.register_listener(Box::new(f)));
+        l.push(h);
     }
+
+    // fn register_listener<T1: GetPtr, T2: GetPtr, U: 'static + FnMut()>(&self, t1: &T1, t2: &T2, f: U) {
+    //     let mut l = self.listeners.lock().unwrap();
+    //     l.push(register_listener(t1, t2, Box::new(f)));
+    // }
 }
 
 impl UiSetup for Counter {
@@ -79,13 +85,13 @@ impl UiSetup for Counter {
         win.set_child(&self.iui, hbox.clone());
         win.show(&self.iui);
 
-        self.register_listener(&self.value, {
+        self.defer(register_listener_1(&self.value, {
             let this = self.clone();
             let mut lbl_value = lbl_value.clone();
             move || {
                 lbl_value.set_text(&this.iui, &format!("                     {}", *this.value));
             }
-        });
+        }));
     }
 }
 

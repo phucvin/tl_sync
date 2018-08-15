@@ -2,14 +2,13 @@ use super::*;
 use std::collections::HashMap;
 use std::ptr;
 
-pub trait RegisterListener {
-    fn register_listener(&self, Box<FnMut()>) -> ListenerHandleRef;
+pub trait GetPtr {
+    fn get_ptr(&self) -> usize;
 }
 
-pub trait Dirty: RegisterListener {
+pub trait Dirty: GetPtr {
     fn sync(&self, from: usize, to: usize);
     fn clear(&self, to: usize);
-    fn get_ptr(&self) -> usize;
     fn re_add(&self);
 }
 
@@ -18,34 +17,61 @@ pub struct ListenerHandle {
 }
 
 pub struct ListenerHandleRef {
-    pub handle: &'static ListenerHandle,
+    // pub handle: &'static ListenerHandle,
+    pub handles: Vec<&'static ListenerHandle>,
 }
 
 impl Drop for ListenerHandleRef {
     fn drop(&mut self) {
         // TODO Incorrect, it maybe drop at different thread from registering
         let l = get_listeners().to_mut(thread_index());
-        let mut is_zeroed = false;
 
-        if let Some(l) = l.get_mut(&self.handle.ptr) {
-            let mut found = None;
+        for handle in self.handles.iter() {
+            let mut is_zeroed = false;
 
-            for (i, it) in l.iter().enumerate() {
-                if ptr::eq(&it.0, self.handle) {
-                    found = Some(i);
-                    break;
+            if let Some(l) = l.get_mut(&handle.ptr) {
+                let mut found = None;
+
+                for (i, it) in l.iter().enumerate() {
+                    if ptr::eq(&it.0, *handle) {
+                        found = Some(i);
+                        break;
+                    }
+                }
+
+                if let Some(i) = found {
+                    l.remove(i);
+                    is_zeroed = l.len() == 0;
                 }
             }
 
-            if let Some(i) = found {
-                l.remove(i);
-                is_zeroed = l.len() == 0;
+            if is_zeroed {
+                l.remove(&handle.ptr);
             }
         }
+    }
+}
 
-        if is_zeroed {
-            l.remove(&self.handle.ptr);
+pub fn register_listener_1<T1, F>(t1: &T1, f: F) -> ListenerHandleRef
+    where T1: GetPtr, F: 'static + FnMut() + Clone
+{
+    let l = get_listeners().to_mut(thread_index());
+    
+    let h1 = {
+        let ptr1 = t1.get_ptr();
+        if !l.contains_key(&ptr1) {
+            l.insert(ptr1, vec![]);
         }
+
+        let l = l.get_mut(&ptr1).unwrap();
+        let h = ListenerHandle { ptr: ptr1 };
+        l.push((h, Box::new(f.clone())));
+
+        &l[l.len() - 1].0
+    };
+
+    ListenerHandleRef {
+        handles: vec![h1],
     }
 }
 

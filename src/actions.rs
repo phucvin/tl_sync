@@ -39,9 +39,9 @@ impl<T: 'static> Action<T> {
     }
 }
 
-impl<T: 'static> RegisterListener for Action<T> {
-    fn register_listener(&self, f: Box<FnMut()>) -> ListenerHandleRef {
-        self.queue.register_listener(f)
+impl<T> GetPtr for Action<T> {
+    fn get_ptr(&self) -> usize {
+        self.queue.get_ptr()
     }
 }
 

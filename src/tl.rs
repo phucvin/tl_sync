@@ -87,21 +87,9 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
     }
 }
 
-impl<T: 'static + ManualCopy<T>> RegisterListener for Tl<T> {
-    fn register_listener(&self, f: Box<FnMut()>) -> ListenerHandleRef {
-        let l = get_listeners().to_mut(thread_index());
-        let ptr = self.get_ptr();
-        if !l.contains_key(&ptr) {
-            l.insert(ptr, vec![]);
-        }
-
-        let l = l.get_mut(&ptr).unwrap();
-        let h = ListenerHandle { ptr };
-        l.push((h, f));
-
-        ListenerHandleRef {
-            handle: &l[l.len() - 1].0,
-        }
+impl<T> GetPtr for Tl<T> {
+    fn get_ptr(&self) -> usize {
+        self.cell.arr.get() as usize
     }
 }
 
@@ -112,10 +100,6 @@ impl<T: 'static + ManualCopy<T>> Dirty for Tl<T> {
 
     fn clear(&self, to: usize) {
         self.cell.inner_manual_clear(to);
-    }
-
-    fn get_ptr(&self) -> usize {
-        self.cell.arr.get() as usize
     }
 
     fn re_add(&self) {
