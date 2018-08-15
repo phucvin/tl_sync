@@ -1,9 +1,9 @@
 use self::Wrc::*;
 use std::ops::Deref;
-use std::rc::{Rc, Weak};
+use std::sync::{Arc, Weak};
 
 pub enum Wrc<T> {
-    Strong(Rc<T>),
+    Strong(Arc<T>),
     Weak(Weak<T>),
 }
 
@@ -29,12 +29,20 @@ impl<T> Deref for Wrc<T> {
 
 impl<T> Wrc<T> {
     pub fn new(value: T) -> Self {
-        Strong(Rc::new(value))
+        Strong(Arc::new(value))
+    }
+
+    pub fn be_weak(&mut self) {
+        *self = self.clone_weak();
+    }
+
+    pub fn be_strong(&mut self) {
+        *self = self.make_strong();
     }
 
     pub fn clone_weak(&self) -> Self {
         match *self {
-            Strong(ref s) => Weak(Rc::downgrade(s)),
+            Strong(ref s) => Weak(Arc::downgrade(s)),
             Weak(ref w) => Weak(w.clone()),
         }
     }
