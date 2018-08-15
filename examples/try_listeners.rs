@@ -48,6 +48,13 @@ impl Screen {
         }
     }
 
+    fn make_strong(&self) -> Self {
+        Self {
+            elements: self.elements.make_strong(),
+            data: self.data.make_strong(),
+        }
+    }
+
     fn setup(&self) {
         let mut elements = self.elements.borrow_mut();
 
@@ -58,6 +65,7 @@ impl Screen {
             let this = self.clone_weak();
 
             e.on_click.add_listener(Box::new(move || {
+                let this = this.make_strong();
                 this.layout();
             }));
         }
@@ -66,6 +74,7 @@ impl Screen {
             let this = self.clone_weak();
 
             e.on_click.add_listener(Box::new(move || {
+                let this = this.make_strong();
                 this.animation();
             }));
         }
