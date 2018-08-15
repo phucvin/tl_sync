@@ -32,11 +32,14 @@ impl Counter {
 
     fn setup(&self) {
         let this = self.clone();
+        // TODO Fix bug after inc, cannot dec
         let f = move || {
             let value = this.value.to_mut();
             *value += this.on_inc.len() as isize;
             *value -= this.on_dec.len() as isize;
         };
+        // TODO Register multiple fields, actions to single listener
+        // and call only once, event multiple things changed
         self.register_listener(&self.on_inc, f.clone());
         self.register_listener(&self.on_dec, f.clone());
     }
