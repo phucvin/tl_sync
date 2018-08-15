@@ -122,6 +122,5 @@ fn main() {
         stop
     };
 
-    ensure_empty_dirties();
     stop();
 }

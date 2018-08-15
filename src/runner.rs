@@ -76,8 +76,9 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         move || {
             compute_rtx.send(false).unwrap();
             compute_thread.join().unwrap();
-            
+
             prepare_peek_notify();
+            ensure_empty_dirties();
             drop_dirties();
         }
     });
