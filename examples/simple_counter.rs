@@ -6,7 +6,7 @@ extern crate tl_sync;
 
 use iui::controls::{Button, HorizontalBox, Label};
 use iui::prelude::*;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use std::time::Duration;
 use tl_sync::*;
 
@@ -16,7 +16,7 @@ struct Counter {
     on_inc: Action<()>,
     on_dec: Action<()>,
     iui: Trust<UI>,
-    listeners: Arc<Mutex<Vec<ListenerHandleRef>>>,
+    listeners: Wrc<Mutex<Vec<ListenerHandleRef>>>,
 }
 
 impl Counter {
@@ -30,9 +30,17 @@ impl Counter {
         }
     }
 
+    fn clone_weak(&self) -> Self {
+        let mut ret = self.clone();
+
+        ret.listeners.be_weak();
+
+        ret
+    }
+
     fn setup(&self) {
         self.defer(register_listener_2(&self.on_inc, &self.on_dec, {
-            let this = self.clone();
+            let this = self.clone_weak();
             move || {
                 let value = this.value.to_mut();
                 *value += this.on_inc.len() as isize;
@@ -79,7 +87,7 @@ impl UiSetup for Counter {
         win.show(&self.iui);
 
         self.defer(register_listener_1(&self.value, {
-            let this = self.clone();
+            let this = self.clone_weak();
             let mut lbl_value = lbl_value.clone();
             move || {
                 lbl_value.set_text(&this.iui, &format!("                     {}", *this.value));
@@ -114,5 +122,6 @@ fn main() {
         stop
     };
 
+    ensure_empty_dirties();
     stop();
 }
