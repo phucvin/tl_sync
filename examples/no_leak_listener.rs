@@ -52,5 +52,6 @@ fn main() {
         peek_notify(prepare_peek_notify());
         sync_clear();
     }
+    ensure_empty_dirties();
     drop_dirties();
 }

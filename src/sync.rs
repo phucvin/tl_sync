@@ -134,6 +134,16 @@ pub fn init_dirties() {
     }
 }
 
+pub fn ensure_empty_dirties() {
+    let d = get_dirties();
+    let l = get_listeners();
+
+    for i in 0..THREADS {
+        assert!(d.get(i).len() == 0);
+        assert!(l.get(i).len() == 0);
+    }
+}
+
 pub fn drop_dirties() {
     // let d = get_dirties();
     // let l = get_listeners();
@@ -274,9 +284,12 @@ pub fn sync_clear() {
     let to = thread_index();
     let d = get_dirties().to_mut(to);
 
-    for it in d.iter() {
+    d.retain(|it| {
         if it.0 == 5 {
             it.1.clear(to);
+            false
+        } else {
+            true
         }
-    }
+    });
 }
