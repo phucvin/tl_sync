@@ -97,8 +97,6 @@ impl ComputeSetup for Counter {
 
 fn main() {
     let stop = {
-        init_dirties();
-
         let iui = UI::init().unwrap();
         let root = Counter::new(iui.clone());
         let (mut tick, stop) = setup(root.clone(), Duration::from_millis(15));
