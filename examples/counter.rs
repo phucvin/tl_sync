@@ -34,9 +34,9 @@ struct Counter {
 }
 
 impl Counter {
-    fn register_listener<T: RegisterListener, U: 'static + FnMut()>(&self, v: &T, f: U) {
+    fn register_listener<T: GetPtr, U: 'static + FnMut() + Clone>(&self, v: &T, f: U) {
         let mut l = self.listeners.lock().unwrap();
-        l.push(v.register_listener(Box::new(f)));
+        l.push(register_listener_1(v, f));
     }
 }
 
@@ -73,6 +73,8 @@ impl UiSetup for Counter {
         self.register_listener(&self.do_toast, {
             let this = self.clone();
             move || {
+                if this.do_toast.len() == 0 { return; }
+                
                 println!("ui do_toast: {}, {}", this.do_toast[0].message, this.counter[0]);
             }
         });
@@ -84,8 +86,6 @@ impl UiSetup for Counter {
 
 impl ComputeSetup for Counter {
     fn setup_compute(&self) {
-        self.counter.to_mut()[0] = 0;
-
         self.register_listener(&self.counter, {
             let this = self.clone();
             move || {
@@ -103,6 +103,8 @@ impl ComputeSetup for Counter {
         self.register_listener(&self.on_click, {
             let this = self.clone();
             move || {
+                if this.on_click.len() == 0 { return; }
+
                 println!("compute on_click: {}", this.on_click[0].counter_at);
                 this.do_toast.fire(Toast { message: format!("Hello {}", this.counter[0]).into() });
             }

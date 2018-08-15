@@ -23,7 +23,7 @@ impl Default for SceneRoot {
 }
 
 impl ManualCopy<SceneRoot> for SceneRoot {
-    fn copy_from(&mut self, _other: &SceneRoot) {
+    fn copy_from(&mut self, _other: &mut SceneRoot) {
         panic!("SHOULD NEVER BE CALLED");
     }
 }
