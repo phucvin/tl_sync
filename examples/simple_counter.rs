@@ -31,17 +31,14 @@ impl Counter {
     }
 
     fn setup(&self) {
-        self.defer(register_listener_2(
-            &self.on_inc, &self.on_dec,
-            {
-                let this = self.clone();
-                move || {
-                    let value = this.value.to_mut();
-                    *value += this.on_inc.len() as isize;
-                    *value -= this.on_dec.len() as isize;
-                }
+        self.defer(register_listener_2(&self.on_inc, &self.on_dec, {
+            let this = self.clone();
+            move || {
+                let value = this.value.to_mut();
+                *value += this.on_inc.len() as isize;
+                *value -= this.on_dec.len() as isize;
             }
-        ));
+        }));
     }
 
     fn defer(&self, h: ListenerHandleRef)
