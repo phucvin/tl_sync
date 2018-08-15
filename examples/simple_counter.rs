@@ -61,7 +61,7 @@ impl UiSetup for Counter {
 
         let mut btn_inc = Button::new(&self.iui, "     +     ");
         btn_inc.on_clicked(&self.iui, {
-            let this = self.clone();
+            let this = self.clone_weak();
             move |_| {
                 this.on_inc.fire(());
             }
@@ -69,7 +69,7 @@ impl UiSetup for Counter {
 
         let mut btn_dec = Button::new(&self.iui, "     -     ");
         btn_dec.on_clicked(&self.iui, {
-            let this = self.clone();
+            let this = self.clone_weak();
             move |_| {
                 this.on_dec.fire(());
                 this.on_inc.fire(());
