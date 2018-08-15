@@ -110,6 +110,10 @@ impl<T: 'static + ManualCopy<T>> Dirty for Tl<T> {
         self.cell.inner_manual_copy(from, to);
     }
 
+    fn clear(&self, to: usize) {
+        self.cell.inner_manual_clear(to);
+    }
+
     fn get_ptr(&self) -> usize {
         self.cell.arr.get() as usize
     }

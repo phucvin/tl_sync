@@ -43,6 +43,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
                     while still_dirty && now.elapsed() < compute_update_duration {
                         sync_from(2);
                         still_dirty = peek_notify(prepare_peek_notify()) > 0;
+                        sync_clear();
                     }
 
                     match tx.send(SyncStatus::Idle) {
@@ -94,6 +95,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
         }
         
         peek_notify(prepared);
+        sync_clear();
 
         let ui_elapsed = now.elapsed();
         if ui_elapsed > compute_update_duration {

@@ -8,6 +8,7 @@ pub trait RegisterListener {
 
 pub trait Dirty: RegisterListener {
     fn sync(&self, from: usize, to: usize);
+    fn clear(&self, to: usize);
     fn get_ptr(&self) -> usize;
     fn re_add(&self);
 }
@@ -182,4 +183,15 @@ pub fn prepare_peek_notify() -> Vec<usize> {
     }
 
     tmp
+}
+
+pub fn sync_clear() {
+    let to = thread_index();
+    let d = get_dirties().to_mut(to);
+
+    for it in d.iter() {
+        if it.0 == 5 {
+            it.1.clear(to);
+        }
+    }
 }

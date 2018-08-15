@@ -29,4 +29,10 @@ impl<T: ManualCopy<T>> TrustCell<T> {
             (&mut *self.arr.get())[to].copy_from(&mut (&mut *self.arr.get())[from]);
         }
     }
+
+    pub fn inner_manual_clear(&self, to: usize) {
+        unsafe {
+            (&mut *self.arr.get())[to].clear();
+        }
+    }
 }

@@ -4,6 +4,10 @@ use std::time::Instant;
 
 pub trait ManualCopy<T> {
     fn copy_from(&mut self, &mut T);
+
+    fn clear(&mut self) {
+        // Do nothing by default
+    }
 }
 
 impl ManualCopy<u8> for u8 {

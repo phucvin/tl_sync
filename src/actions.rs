@@ -50,4 +50,8 @@ impl<T> ManualCopy<Wrapper<T>> for Wrapper<T> {
         self.0.clear();
         self.0.append(&mut other.0);
     }
+
+    fn clear(&mut self) {
+        self.0.clear();
+    }
 }
