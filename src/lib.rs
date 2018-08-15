@@ -2,6 +2,7 @@
 #![feature(fnbox)]
 #![feature(drain_filter)]
 
+extern crate uuid;
 // extern crate rayon;
 
 mod rc;

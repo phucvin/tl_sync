@@ -31,16 +31,17 @@ impl Counter {
     }
 
     fn setup(&self) {
-        let this = self.clone();
-        let f = move || {
-            let value = this.value.to_mut();
-            *value += this.on_inc.len() as isize;
-            *value -= this.on_dec.len() as isize;
-        };
-        // TODO Register multiple fields, actions to single listener
-        // and call only once, event multiple things changed
-        self.defer(register_listener_1(&self.on_inc, f.clone()));
-        self.defer(register_listener_1(&self.on_dec, f.clone()));
+        self.defer(register_listener_2(
+            &self.on_inc, &self.on_dec,
+            {
+                let this = self.clone();
+                move || {
+                    let value = this.value.to_mut();
+                    *value += this.on_inc.len() as isize;
+                    *value -= this.on_dec.len() as isize;
+                }
+            }
+        ));
     }
 
     fn defer(&self, h: ListenerHandleRef)

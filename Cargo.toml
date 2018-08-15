@@ -4,7 +4,9 @@ version = "0.1.0"
 authors = ["phucvin <phucvin2@gmail.com>"]
 
 [dependencies]
+uuid = { version = "0.6", features = ["v4"] }
 rayon = "1.0"
+
 
 [dependencies.iui]
 git = "https://github.com/th0rex/libui-rs"

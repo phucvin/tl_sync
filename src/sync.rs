@@ -1,4 +1,5 @@
 use super::*;
+use uuid::Uuid;
 use std::collections::HashMap;
 use std::ptr;
 
@@ -14,6 +15,7 @@ pub trait Dirty: GetPtr {
 
 pub struct ListenerHandle {
     pub ptr: usize,
+    uuid: Option<Uuid>,
 }
 
 pub struct ListenerHandleRef {
@@ -55,16 +57,17 @@ impl Drop for ListenerHandleRef {
 pub fn register_listener_1<T1, F>(t1: &T1, f: F) -> ListenerHandleRef
     where T1: GetPtr, F: 'static + FnMut() + Clone
 {
-    let l = get_listeners().to_mut(thread_index());
+    let uuid = None;
     
     let h1 = {
+        let l = get_listeners().to_mut(thread_index());
         let ptr1 = t1.get_ptr();
         if !l.contains_key(&ptr1) {
             l.insert(ptr1, vec![]);
         }
 
         let l = l.get_mut(&ptr1).unwrap();
-        let h = ListenerHandle { ptr: ptr1 };
+        let h = ListenerHandle { ptr: ptr1, uuid };
         l.push((h, Box::new(f.clone())));
 
         &l[l.len() - 1].0
@@ -72,6 +75,44 @@ pub fn register_listener_1<T1, F>(t1: &T1, f: F) -> ListenerHandleRef
 
     ListenerHandleRef {
         handles: vec![h1],
+    }
+}
+
+pub fn register_listener_2<T1, T2, F>(t1: &T1, t2: &T2, f: F) -> ListenerHandleRef
+    where T1: GetPtr, T2: GetPtr, F: 'static + FnMut() + Clone
+{
+    let uuid = Some(Uuid::new_v4());
+    
+    let h1 = {
+        let l = get_listeners().to_mut(thread_index());
+        let ptr1 = t1.get_ptr();
+        if !l.contains_key(&ptr1) {
+            l.insert(ptr1, vec![]);
+        }
+
+        let l = l.get_mut(&ptr1).unwrap();
+        let h = ListenerHandle { ptr: ptr1, uuid };
+        l.push((h, Box::new(f.clone())));
+
+        &l[l.len() - 1].0
+    };
+    
+    let h2 = {
+        let l = get_listeners().to_mut(thread_index());
+        let ptr2 = t2.get_ptr();
+        if !l.contains_key(&ptr2) {
+            l.insert(ptr2, vec![]);
+        }
+
+        let l = l.get_mut(&ptr2).unwrap();
+        let h = ListenerHandle { ptr: ptr2, uuid };
+        l.push((h, Box::new(f.clone())));
+
+        &l[l.len() - 1].0
+    };
+
+    ListenerHandleRef {
+        handles: vec![h1, h2],
     }
 }
 
@@ -178,11 +219,19 @@ pub fn sync_from(from: usize) {
 pub fn peek_notify(d: Vec<usize>) -> usize {
     let to = thread_index();
     let l = get_listeners().to_mut(to);
+    let mut uuids = vec![];
 
     // println!("PEEK NOTIFY -> {} : {:?}", to, d);
     for ptr in d.iter() {
         if let Some(l) = l.get_mut(&ptr) {
-            l.iter_mut().for_each(|it| it.1());
+            l.iter_mut().for_each(|it| {
+                if uuids.contains(&it.0.uuid) {
+                    return;
+                }
+
+                uuids.push(it.0.uuid);
+                it.1();
+            });
         }
     }
 
