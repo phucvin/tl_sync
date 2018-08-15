@@ -93,7 +93,7 @@ pub fn setup<T: 'static + Send + Clone + UiSetup + ComputeSetup>(
             sync_to(1);
             compute_rtx.send(true).unwrap();
         }
-        
+
         peek_notify(prepared);
         sync_clear();
 

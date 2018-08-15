@@ -7,10 +7,10 @@ extern crate tl_sync;
 use iui::controls::Button;
 use iui::prelude::*;
 use rayon::prelude::*;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 use std::cell::Cell;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tl_sync::*;
 
 struct Click {
@@ -48,7 +48,9 @@ impl UiSetup for Counter {
         btn_test.on_clicked(&self.iui, {
             let this = self.clone();
             move |_| {
-                this.on_click.fire(Click { counter_at: this.counter[0] });
+                this.on_click.fire(Click {
+                    counter_at: this.counter[0],
+                });
             }
         });
 
@@ -58,24 +60,29 @@ impl UiSetup for Counter {
             let last_ticks = Rc::new(Cell::new(0));
 
             move || {
-                if *this.ticks <= last_ticks.get() { return; }
+                if *this.ticks <= last_ticks.get() {
+                    return;
+                }
                 last_ticks.set(*this.ticks);
 
                 // let dt = *this.time - *this.last_time;
                 // println!("FPS: {}", 1000 / (dt.subsec_millis() + 1));
 
-                btn_test.set_text(&this.iui, &format!(
-                    "Counter: {}", this.counter[0]
-                ));
+                btn_test.set_text(&this.iui, &format!("Counter: {}", this.counter[0]));
             }
         });
 
         self.register_listener(&self.do_toast, {
             let this = self.clone();
             move || {
-                if this.do_toast.len() == 0 { return; }
-                
-                println!("ui do_toast: {}, {}", this.do_toast[0].message, this.counter[0]);
+                if this.do_toast.len() == 0 {
+                    return;
+                }
+
+                println!(
+                    "ui do_toast: {}, {}",
+                    this.do_toast[0].message, this.counter[0]
+                );
             }
         });
 
@@ -103,10 +110,14 @@ impl ComputeSetup for Counter {
         self.register_listener(&self.on_click, {
             let this = self.clone();
             move || {
-                if this.on_click.len() == 0 { return; }
+                if this.on_click.len() == 0 {
+                    return;
+                }
 
                 println!("compute on_click: {}", this.on_click[0].counter_at);
-                this.do_toast.fire(Toast { message: format!("Hello {}", this.counter[0]).into() });
+                this.do_toast.fire(Toast {
+                    message: format!("Hello {}", this.counter[0]).into(),
+                });
             }
         });
     }

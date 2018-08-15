@@ -26,11 +26,7 @@ impl<T> Deref for Action<T> {
 impl<T: 'static> Action<T> {
     pub fn new() -> Self {
         Self {
-            queue: Tl::new_advanced([
-                Wrapper(vec![]),
-                Wrapper(vec![]),
-                Wrapper(vec![]),
-            ]),
+            queue: Tl::new_advanced([Wrapper(vec![]), Wrapper(vec![]), Wrapper(vec![])]),
         }
     }
 

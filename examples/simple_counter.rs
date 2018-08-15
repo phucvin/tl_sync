@@ -4,7 +4,7 @@ extern crate iui;
 extern crate rayon;
 extern crate tl_sync;
 
-use iui::controls::{ Button, Label, HorizontalBox };
+use iui::controls::{Button, HorizontalBox, Label};
 use iui::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -41,8 +41,7 @@ impl Counter {
         }));
     }
 
-    fn defer(&self, h: ListenerHandleRef)
-    {
+    fn defer(&self, h: ListenerHandleRef) {
         let mut l = self.listeners.lock().unwrap();
         l.push(h);
     }

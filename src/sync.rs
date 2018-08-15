@@ -1,7 +1,7 @@
 use super::*;
-use uuid::Uuid;
 use std::collections::HashMap;
 use std::ptr;
+use uuid::Uuid;
 
 pub trait GetPtr {
     fn get_ptr(&self) -> usize;
@@ -55,10 +55,12 @@ impl Drop for ListenerHandleRef {
 }
 
 pub fn register_listener_1<T1, F>(t1: &T1, mut f: F) -> ListenerHandleRef
-    where T1: GetPtr, F: 'static + FnMut() + Clone
+where
+    T1: GetPtr,
+    F: 'static + FnMut() + Clone,
 {
     let uuid = None;
-    
+
     let h1 = {
         let l = get_listeners().to_mut(thread_index());
         let ptr1 = t1.get_ptr();
@@ -75,16 +77,17 @@ pub fn register_listener_1<T1, F>(t1: &T1, mut f: F) -> ListenerHandleRef
 
     f();
 
-    ListenerHandleRef {
-        handles: vec![h1],
-    }
+    ListenerHandleRef { handles: vec![h1] }
 }
 
 pub fn register_listener_2<T1, T2, F>(t1: &T1, t2: &T2, mut f: F) -> ListenerHandleRef
-    where T1: GetPtr, T2: GetPtr, F: 'static + FnMut() + Clone
+where
+    T1: GetPtr,
+    T2: GetPtr,
+    F: 'static + FnMut() + Clone,
 {
     let uuid = Some(Uuid::new_v4());
-    
+
     let h1 = {
         let l = get_listeners().to_mut(thread_index());
         let ptr1 = t1.get_ptr();
@@ -98,7 +101,7 @@ pub fn register_listener_2<T1, T2, F>(t1: &T1, t2: &T2, mut f: F) -> ListenerHan
 
         &l[l.len() - 1].0
     };
-    
+
     let h2 = {
         let l = get_listeners().to_mut(thread_index());
         let ptr2 = t2.get_ptr();
@@ -183,7 +186,9 @@ pub fn sync_to(to: usize) {
 
     // let mut v = vec![];
     tmp.iter_mut().for_each(|it| {
-        if it.0 >= 4 { return; }
+        if it.0 >= 4 {
+            return;
+        }
 
         it.1.sync(from, to);
 
