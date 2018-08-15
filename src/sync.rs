@@ -229,11 +229,12 @@ pub fn peek_notify(d: Vec<usize>) -> usize {
     for ptr in d.iter() {
         if let Some(l) = l.get_mut(&ptr) {
             l.iter_mut().for_each(|it| {
-                if uuids.contains(&it.0.uuid) {
-                    return;
+                if let Some(uuid) = it.0.uuid {
+                    if uuids.contains(&uuid) {
+                        return;
+                    }
+                    uuids.push(uuid);
                 }
-
-                uuids.push(it.0.uuid);
                 it.1();
             });
         }
