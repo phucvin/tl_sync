@@ -14,7 +14,7 @@ impl Container {
     fn clone_weak(&self) -> Self {
         let mut ret = self.clone();
         
-        ret.listeners = ret.listeners.clone_weak();
+        ret.listeners.be_weak();
         
         ret
     }

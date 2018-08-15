@@ -16,6 +16,12 @@ impl<T> Clone for Wrc<T> {
     }
 }
 
+impl<T: Default> Default for Wrc<T> {
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
 impl<T> Deref for Wrc<T> {
     type Target = T;
 
