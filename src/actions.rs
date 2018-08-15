@@ -26,12 +26,8 @@ impl<T> Deref for Action<T> {
 impl<T: 'static> Action<T> {
     pub fn new() -> Self {
         // TODO Find a way that flexible with thread
-        let a = [
-            Wrapper(vec![]),
-            Wrapper(vec![]),
-            Wrapper(vec![]),
-        ];
-        
+        let a = [Wrapper(vec![]), Wrapper(vec![]), Wrapper(vec![])];
+
         Self {
             queue: Tl::new_advanced(a),
         }
