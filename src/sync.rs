@@ -54,7 +54,7 @@ impl Drop for ListenerHandleRef {
     }
 }
 
-pub fn register_listener_1<T1, F>(t1: &T1, f: F) -> ListenerHandleRef
+pub fn register_listener_1<T1, F>(t1: &T1, mut f: F) -> ListenerHandleRef
     where T1: GetPtr, F: 'static + FnMut() + Clone
 {
     let uuid = None;
@@ -73,12 +73,14 @@ pub fn register_listener_1<T1, F>(t1: &T1, f: F) -> ListenerHandleRef
         &l[l.len() - 1].0
     };
 
+    f();
+
     ListenerHandleRef {
         handles: vec![h1],
     }
 }
 
-pub fn register_listener_2<T1, T2, F>(t1: &T1, t2: &T2, f: F) -> ListenerHandleRef
+pub fn register_listener_2<T1, T2, F>(t1: &T1, t2: &T2, mut f: F) -> ListenerHandleRef
     where T1: GetPtr, T2: GetPtr, F: 'static + FnMut() + Clone
 {
     let uuid = Some(Uuid::new_v4());
@@ -110,6 +112,8 @@ pub fn register_listener_2<T1, T2, F>(t1: &T1, t2: &T2, f: F) -> ListenerHandleR
 
         &l[l.len() - 1].0
     };
+
+    f();
 
     ListenerHandleRef {
         handles: vec![h1, h2],
