@@ -1,7 +1,6 @@
 // #![windows_subsystem="windows"]
 
 extern crate iui;
-extern crate rayon;
 extern crate tl_sync;
 
 use iui::controls::{Button, HorizontalBox, Label};
