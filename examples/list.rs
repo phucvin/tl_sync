@@ -1,17 +1,16 @@
-// #![windows_subsystem="windows"]
-
 extern crate tl_sync;
 
 use std::sync::Mutex;
 use std::time::Duration;
 use tl_sync::*;
 
-struct VerifyAction<T: Clone> {
+#[derive(Clone)]
+struct VerifyAction<T: 'static + Clone> {
     trigger: Action<T>,
     verified: Action<T>,
 }
 
-impl<T: Clone> VerifyAction<T> {
+impl<T: 'static + Clone> VerifyAction<T> {
     fn new() -> Self {
         Self {
             trigger: Action::new(),
@@ -20,7 +19,9 @@ impl<T: Clone> VerifyAction<T> {
     }
 
     fn transfer(&self) {
-        trigger.for_each(|it| self.verified.fire(it.clone()));
+        for it in self.trigger.iter() {
+            self.verified.fire(it.clone());
+        }
     }
 }
 
@@ -51,12 +52,12 @@ impl Root {
     }
 
     fn setup(&self) {
-        self.push(register_listener_1(&self.on_upgrade_item.trigger, {
+        self.defer(register_listener_1(&self.on_upgrade_item.trigger, {
             let this = self.clone_weak();
             move || {
                 let mut required_money = 0;
 
-                for item_id in this.on_upgrade_item.trigger {
+                for item_id in this.on_upgrade_item.trigger.iter() {
                     let item = this.item_map.get(item_id).unwrap();
 
                     required_money += *item.value;
@@ -70,23 +71,25 @@ impl Root {
             }
         }));
 
-        self.push(register_listener_2(&self.on_upgrade_item.verified, &self.on_iap, {
+        self.defer(register_listener_2(&self.on_upgrade_item.verified, &self.on_iap, {
             let this = self.clone_weak();
             move || {
                 let mut inc = 0;
                 let mut dec = 0;
 
-                this.on_iap.for_each(|it| inc += it);
+                for it in this.on_iap.iter() {
+                    inc += it;
+                }
 
-                this.on_upgrade_item.verified.for_each(|it| {
+                for it in this.on_upgrade_item.verified.iter() {
                     let item = this.item_map.get(it);
 
                     dec += *item.value;
-                });
+                }
 
-                assert!(*this.money + total_inc <= 2_000_000_000, "overflow");
-                assert!(total_dec <= *this.money + total_inc, "invalid money inc/dec");
-                *this.money.to_mut() = *this.money + total_inc - total_dec;
+                assert!(*this.money + inc <= 2_000_000_000, "overflow");
+                assert!(dec <= *this.money + inc, "invalid money inc/dec");
+                *this.money.to_mut() = *this.money + inc - dec;
             }
         }));
     }
@@ -102,7 +105,7 @@ struct Item {
     id: String,
     value: Tl<isize>,
     // Demo only, action should be at top level
-    on_use: Action<isize>,
+    on_use: VerifyAction<isize>,
     listeners: Wrc<Mutex<Vec<ListenerHandleRef>>>,
 }
 
@@ -111,7 +114,7 @@ impl Item {
         Self {
             id,
             value: Tl::new(value),
-            on_use: Action::new(),
+            on_use: VerifyAction::new(),
             listeners: Default::default(),
         }
     }
@@ -132,7 +135,7 @@ impl Item {
             move || {
                 let mut required_value = 0;
 
-                for it in this.on_use.trigger {
+                for it in this.on_use.trigger.iter() {
                     required_value += it;
                 }
 
@@ -144,20 +147,22 @@ impl Item {
             }
         }));
 
-        self.defer(register_listener_1(&root.on_upgrade_item, &root.on_use_item, {
+        self.defer(register_listener_2(&root.on_upgrade_item.verified, &self.on_use.verified, {
             let this = self.clone_weak();
             move || {
                 let root = this.root.make_strong();
                 let mut inc = 0;
                 let mut dec = 0;
 
-                root.on_upgrade_item.verified.for_each(|it| if it == this.id {
-                    inc += 10;
-                });
+                for it in root.on_upgrade_item.verified.iter() {
+                    if it == this.id {
+                        inc += 10;
+                    }
+                }
 
-                root.on_use_item.verified.for_each(|it| if it.0 == this.id {
-                    dec += it.1;
-                });
+                for it in this.on_use.verified.iter() {
+                    dec += it;
+                }
 
                 if inc == 0 && dec == 0 { return; }
                 assert!(*this.value + inc - dec >= 0);
@@ -174,18 +179,11 @@ impl Item {
 
 fn main() {
     let stop = {
-        let root = Counter::new(iui.clone());
+        let root = Root::new();
         let (mut tick, stop) = setup(root.clone(), Duration::from_millis(15));
-        let mut ev = iui.event_loop();
-
-        ev.on_tick(&iui, move || {
+        
+        for _ in 1..100 {
             tick();
-        });
-
-        loop {
-            if !ev.next_tick(&iui) {
-                break;
-            }
         }
 
         stop
