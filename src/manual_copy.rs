@@ -1,5 +1,7 @@
 use std::cmp;
 use std::time::Instant;
+use std::collections::HashMap;
+use std::hash::Hash;
 // use rayon::prelude::*;
 
 pub trait ManualCopy<T> {
@@ -86,5 +88,14 @@ impl<U: Send + Sync + Clone> ManualCopy<Vec<U>> for Vec<U> {
         // self.as_mut_slice()[..min_len].par_iter_mut().enumerate().for_each(|(i, it)| {
         //     *it = other[i].clone();
         // });
+    }
+}
+
+impl<K: Clone + Eq + Hash, V: Send + Sync + Clone> ManualCopy<HashMap<K, V>> for HashMap<K, V> {
+    fn copy_from(&mut self, other: &mut HashMap<K, V>) {
+        self.clear();
+        for (k, v) in other {
+            self.insert(k.clone(), v.clone());
+        }
     }
 }

@@ -2,6 +2,7 @@ extern crate tl_sync;
 
 use std::sync::Mutex;
 use std::time::Duration;
+use std::collections::HashMap;
 use tl_sync::*;
 
 #[derive(Clone)]
@@ -28,6 +29,7 @@ impl<T: 'static + Clone> VerifyAction<T> {
 #[derive(Clone)]
 struct Root {
     money: Tl<usize>,
+    item_map: Tl<HashMap<String, Item>>,
     on_upgrade_item: VerifyAction<String>,
     on_iap: Action<usize>,
     listeners: Wrc<Mutex<Vec<ListenerHandleRef>>>,
@@ -37,6 +39,7 @@ impl Root {
     fn new() -> Self {
         Self {
             money: Tl::new(1000),
+            item_map: Tl::new(HashMap::new()),
             on_upgrade_item: VerifyAction::new(),
             on_iap: Action::new(),
             listeners: Default::default(),
@@ -82,7 +85,7 @@ impl Root {
                 }
 
                 for it in this.on_upgrade_item.verified.iter() {
-                    let item = this.item_map.get(it);
+                    let item = this.item_map.get(it).unwrap();
 
                     dec += *item.value;
                 }
@@ -103,19 +106,21 @@ impl Root {
 #[derive(Clone)]
 struct Item {
     id: String,
-    value: Tl<isize>,
+    value: Tl<usize>,
     // Demo only, action should be at top level
-    on_use: VerifyAction<isize>,
+    on_use: VerifyAction<usize>,
     listeners: Wrc<Mutex<Vec<ListenerHandleRef>>>,
+    root: Wrc<Root>,
 }
 
 impl Item {
-    fn new(id: String, value: isize) -> Self {
+    fn new(id: String, value: usize, root: Wrc<Root>) -> Self {
         Self {
             id,
             value: Tl::new(value),
             on_use: VerifyAction::new(),
             listeners: Default::default(),
+            root,
         }
     }
 
@@ -155,7 +160,7 @@ impl Item {
                 let mut dec = 0;
 
                 for it in root.on_upgrade_item.verified.iter() {
-                    if it == this.id {
+                    if *it == this.id {
                         inc += 10;
                     }
                 }
@@ -165,7 +170,7 @@ impl Item {
                 }
 
                 if inc == 0 && dec == 0 { return; }
-                assert!(*this.value + inc - dec >= 0);
+                assert!(dec <= *this.value + inc);
                 *this.value.to_mut() = *this.value + inc - dec;
             }
         }));
@@ -174,6 +179,26 @@ impl Item {
     fn defer(&self, h: ListenerHandleRef) {
         let mut l = self.listeners.lock().unwrap();
         l.push(h);
+    }
+}
+
+impl UiSetup for Root {
+    fn setup_ui(&self) {
+        //
+    }
+}
+
+impl ComputeSetup for Root {
+    fn setup_compute(&self) {
+        let item_map = self.item_map.to_mut();
+        
+        item_map.insert(
+            "i001".into(),
+            Item::new("i001".into(), 19, self)
+        );
+        item_map.get("i001").unwrap().setup();
+
+        self.setup();
     }
 }
 
