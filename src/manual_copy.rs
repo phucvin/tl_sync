@@ -93,6 +93,7 @@ impl<U: Send + Sync + Clone> ManualCopy<Vec<U>> for Vec<U> {
 
 impl<K: Clone + Eq + Hash, V: Send + Sync + Clone> ManualCopy<HashMap<K, V>> for HashMap<K, V> {
     fn copy_from(&mut self, other: &mut HashMap<K, V>) {
+        // TODO Faster copy
         self.clear();
         for (k, v) in other {
             self.insert(k.clone(), v.clone());

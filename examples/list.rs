@@ -110,17 +110,15 @@ struct Item {
     // Demo only, action should be at top level
     on_use: VerifyAction<usize>,
     listeners: Wrc<Mutex<Vec<ListenerHandleRef>>>,
-    root: Wrc<Root>,
 }
 
 impl Item {
-    fn new(id: String, value: usize, root: Wrc<Root>) -> Self {
+    fn new(id: String, value: usize) -> Self {
         Self {
             id,
             value: Tl::new(value),
             on_use: VerifyAction::new(),
             listeners: Default::default(),
-            root,
         }
     }
 
@@ -132,9 +130,7 @@ impl Item {
         ret
     }
 
-    fn setup(&self) {
-        let root = self.root.make_strong();
-
+    fn setup(&self, on_upgrade_item: &VerifyAction<String>) {
         self.defer(register_listener_1(&self.on_use.trigger, {
             let this = self.clone_weak();
             move || {
@@ -152,14 +148,14 @@ impl Item {
             }
         }));
 
-        self.defer(register_listener_2(&root.on_upgrade_item.verified, &self.on_use.verified, {
+        self.defer(register_listener_2(&on_upgrade_item.verified, &self.on_use.verified, {
             let this = self.clone_weak();
+            let on_upgrade_item = on_upgrade_item.clone();
             move || {
-                let root = this.root.make_strong();
                 let mut inc = 0;
                 let mut dec = 0;
 
-                for it in root.on_upgrade_item.verified.iter() {
+                for it in on_upgrade_item.verified.iter() {
                     if *it == this.id {
                         inc += 10;
                     }
@@ -194,9 +190,9 @@ impl ComputeSetup for Root {
         
         item_map.insert(
             "i001".into(),
-            Item::new("i001".into(), 19, self)
+            Item::new("i001".into(), 19)
         );
-        item_map.get("i001").unwrap().setup();
+        item_map.get("i001").unwrap().setup(&self.on_upgrade_item);
 
         self.setup();
     }
