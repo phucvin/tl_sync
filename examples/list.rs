@@ -186,15 +186,16 @@ impl UiSetup for Root {
 
 impl ComputeSetup for Root {
     fn setup_compute(&self) {
+        self.setup();
+
         let item_map = self.item_map.to_mut();
-        
         item_map.insert(
             "i001".into(),
             Item::new("i001".into(), 19)
         );
         item_map.get("i001").unwrap().setup(&self.on_upgrade_item);
 
-        self.setup();
+        self.on_upgrade_item.trigger.fire("i001".into());
     }
 }
 
