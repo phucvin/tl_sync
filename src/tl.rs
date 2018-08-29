@@ -79,18 +79,26 @@ impl<T: 'static + ManualCopy<T>> Tl<T> {
 
             for it in d.iter_mut() {
                 if it.1.get_ptr() == ptr as usize {
-                    it.0 = 3;
+                    if it.0 == 4 {
+                        panic!(
+                            "Only allow mutation from 1 thread {}, {}",
+                            it.0, ptr as usize
+                        );
+                    } else {
+                        it.0 = 1;
+                    }
+
                     is_unique = false;
                     break;
                 }
             }
 
             if is_unique {
-                d.push((3, tmp));
+                d.push((1, tmp));
             }
         }
 
-        self.cell.to_mut(thread_index())
+        self.cell.to_mut(MUTATE_THREAD_INDEX)
     }
 }
 

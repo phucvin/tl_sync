@@ -90,6 +90,7 @@ impl Root {
                     dec += *item.value;
                 }
 
+                println!("money: {}", *this.money + inc - dec);
                 assert!(*this.money + inc <= 2_000_000_000, "overflow");
                 assert!(dec <= *this.money + inc, "invalid money inc/dec");
                 *this.money.to_mut() = *this.money + inc - dec;
@@ -165,6 +166,7 @@ impl Item {
                     dec += it;
                 }
 
+                println!("{} value: {}", this.id, *this.value + inc - dec);
                 if inc == 0 && dec == 0 { return; }
                 assert!(dec <= *this.value + inc);
                 *this.value.to_mut() = *this.value + inc - dec;
@@ -202,9 +204,9 @@ impl ComputeSetup for Root {
 fn main() {
     let stop = {
         let root = Root::new();
-        let (mut tick, stop) = setup(root.clone(), Duration::from_millis(15));
+        let (mut tick, stop) = setup(root.clone(), Duration::from_millis(1));
         
-        for _ in 1..100 {
+        for _ in 1..10 {
             tick();
         }
 
