@@ -14,7 +14,7 @@ pub trait Dirty: GetPtr {
 }
 
 pub struct ListenerHandle {
-    pub ptr: usize,
+    ptr: usize,
     uuid: Option<Uuid>,
 }
 
