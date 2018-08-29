@@ -25,25 +25,16 @@ pub struct ListenerHandleRef {
 
 impl Drop for ListenerHandleRef {
     fn drop(&mut self) {
+        // TODO Maybe drop at different thread
+        // accessing listeners here is not thread-safe
         let l = get_listeners().to_mut(self.from);
 
         for handle in self.handles.iter() {
             let mut is_zeroed = false;
 
             if let Some(l) = l.get_mut(&handle.ptr) {
-                let mut found = None;
-
-                for (i, it) in l.iter().enumerate() {
-                    if ptr::eq(&it.0, *handle) {
-                        found = Some(i);
-                        break;
-                    }
-                }
-
-                if let Some(i) = found {
-                    l.remove(i);
-                    is_zeroed = l.len() == 0;
-                }
+                l.retain(|it| !ptr::eq(&it.0, *handle));
+                is_zeroed = l.len() == 0;
             }
 
             if is_zeroed {
