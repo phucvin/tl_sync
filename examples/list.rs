@@ -205,6 +205,7 @@ impl ComputeSetup for Root {
         self.on_upgrade_item.trigger.fire("i001".into());
         self.on_upgrade_item.trigger.fire("i001".into());
         self.on_upgrade_item.trigger.fire("i002".into());
+        item_map.get("i001").unwrap().on_use.trigger.fire(5);
     }
 }
 
