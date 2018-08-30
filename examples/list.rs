@@ -38,7 +38,7 @@ struct Root {
 impl Root {
     fn new() -> Self {
         Self {
-            money: Tl::new(1000),
+            money: Tl::new(100),
             item_map: Tl::new(HashMap::new()),
             on_upgrade_item: VerifyAction::new(),
             on_iap: Action::new(),
@@ -69,7 +69,7 @@ impl Root {
                 if *this.money >= required_money {
                     this.on_upgrade_item.transfer();
                 } else {
-                    // TODO Show/Toast error to UI
+                    println!("not enough money to upgrade item(s)");
                 }
             }
         }));
@@ -90,10 +90,10 @@ impl Root {
                     dec += *item.value;
                 }
 
-                println!("money: {}", *this.money + inc - dec);
                 assert!(*this.money + inc <= 2_000_000_000, "overflow");
                 assert!(dec <= *this.money + inc, "invalid money inc/dec");
                 *this.money.to_mut() = *this.money + inc - dec;
+                println!("money: {}", *this.money + inc - dec);
             }
         }));
     }
@@ -166,10 +166,10 @@ impl Item {
                     dec += it;
                 }
 
-                println!("{} value: {}", this.id, *this.value + inc - dec);
                 if inc == 0 && dec == 0 { return; }
                 assert!(dec <= *this.value + inc);
                 *this.value.to_mut() = *this.value + inc - dec;
+                println!("{} value: {}", this.id, *this.value + inc - dec);
             }
         }));
     }
@@ -195,9 +195,16 @@ impl ComputeSetup for Root {
             "i001".into(),
             Item::new("i001".into(), 19)
         );
+        item_map.insert(
+            "i002".into(),
+            Item::new("i002".into(), 56)
+        );
         item_map.get("i001").unwrap().setup(&self.on_upgrade_item);
+        item_map.get("i002").unwrap().setup(&self.on_upgrade_item);
 
         self.on_upgrade_item.trigger.fire("i001".into());
+        self.on_upgrade_item.trigger.fire("i001".into());
+        self.on_upgrade_item.trigger.fire("i002".into());
     }
 }
 
