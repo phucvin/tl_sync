@@ -1,6 +1,5 @@
 use super::*;
 use std::collections::HashMap;
-use std::ptr;
 use uuid::Uuid;
 
 pub trait GetPtr {
@@ -13,13 +12,14 @@ pub trait Dirty: GetPtr {
     fn re_add(&self);
 }
 
+#[derive(Clone)]
 pub struct ListenerHandle {
     ptr: usize,
-    uuid: Option<Uuid>,
+    uuid: Uuid,
 }
 
 pub struct ListenerHandleRef {
-    pub handles: Vec<&'static ListenerHandle>,
+    pub handles: Vec<ListenerHandle>,
     from: usize,
 }
 
@@ -33,7 +33,7 @@ impl Drop for ListenerHandleRef {
             let mut is_zeroed = false;
 
             if let Some(l) = l.get_mut(&handle.ptr) {
-                l.retain(|it| !ptr::eq(&it.0, *handle));
+                l.retain(|it| it.0.uuid != handle.uuid);
                 is_zeroed = l.len() == 0;
             }
 
@@ -49,7 +49,7 @@ where
     T1: GetPtr,
     F: 'static + FnMut() + Clone,
 {
-    let uuid = None;
+    let uuid = Uuid::new_v4();
 
     let h1 = {
         let l = get_listeners().to_mut(thread_index());
@@ -60,9 +60,9 @@ where
 
         let l = l.get_mut(&ptr1).unwrap();
         let h = ListenerHandle { ptr: ptr1, uuid };
-        l.push((h, Box::new(f.clone())));
+        l.push((h.clone(), Box::new(f.clone())));
 
-        &l[l.len() - 1].0
+        h
     };
 
     f();
@@ -79,7 +79,7 @@ where
     T2: GetPtr,
     F: 'static + FnMut() + Clone,
 {
-    let uuid = Some(Uuid::new_v4());
+    let uuid = Uuid::new_v4();
 
     let h1 = {
         let l = get_listeners().to_mut(thread_index());
@@ -90,9 +90,9 @@ where
 
         let l = l.get_mut(&ptr1).unwrap();
         let h = ListenerHandle { ptr: ptr1, uuid };
-        l.push((h, Box::new(f.clone())));
+        l.push((h.clone(), Box::new(f.clone())));
 
-        &l[l.len() - 1].0
+        h
     };
 
     let h2 = {
@@ -104,9 +104,9 @@ where
 
         let l = l.get_mut(&ptr2).unwrap();
         let h = ListenerHandle { ptr: ptr2, uuid };
-        l.push((h, Box::new(f.clone())));
+        l.push((h.clone(), Box::new(f.clone())));
 
-        &l[l.len() - 1].0
+        h
     };
 
     f();
@@ -238,12 +238,12 @@ pub fn peek_notify(d: Vec<usize>) -> usize {
     for ptr in d.iter() {
         if let Some(l) = l.get_mut(&ptr) {
             l.iter_mut().for_each(|it| {
-                if let Some(uuid) = it.0.uuid {
-                    if uuids.contains(&uuid) {
-                        return;
-                    }
-                    uuids.push(uuid);
+                let uuid = it.0.uuid;
+                if uuids.contains(&uuid) {
+                    return;
                 }
+                uuids.push(uuid);
+                
                 it.1();
             });
         }
