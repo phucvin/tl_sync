@@ -13,18 +13,22 @@ pub trait Dirty: GetPtr {
     fn re_add(&self);
 }
 
+#[derive(Clone)]
 pub struct ListenerHandle {
     ptr: usize,
+    ptr_bk: usize,
     uuid: Option<Uuid>,
 }
 
 pub struct ListenerHandleRef {
-    pub handles: Vec<&'static ListenerHandle>,
+    ptr1: usize,
+    handles: Vec<ListenerHandle>,
     from: usize,
 }
 
 impl Drop for ListenerHandleRef {
     fn drop(&mut self) {
+        println!("drop {} - {:?}, {}", self.handles[0].ptr, self.handles[0].uuid, self.handles[0].ptr_bk);
         // TODO Maybe drop at different thread
         // accessing listeners here is not thread-safe
         let l = get_listeners().to_mut(self.from);
@@ -33,8 +37,15 @@ impl Drop for ListenerHandleRef {
             let mut is_zeroed = false;
 
             if let Some(l) = l.get_mut(&handle.ptr) {
-                l.retain(|it| !ptr::eq(&it.0, *handle));
+                let a = l.len();
+                l.retain(|it| it.0.uuid != handle.uuid);
                 is_zeroed = l.len() == 0;
+                println!("{} - {:?}: {} - {}", handle.ptr, handle.uuid, a, l.len());
+                for it in l.iter() {
+                    println!("it: {}", it.0.ptr);
+                }
+            } else {
+                println!("empty");
             }
 
             if is_zeroed {
@@ -49,7 +60,7 @@ where
     T1: GetPtr,
     F: 'static + FnMut() + Clone,
 {
-    let uuid = None;
+    let uuid = Some(Uuid::new_v4());
 
     let h1 = {
         let l = get_listeners().to_mut(thread_index());
@@ -59,15 +70,20 @@ where
         }
 
         let l = l.get_mut(&ptr1).unwrap();
-        let h = ListenerHandle { ptr: ptr1, uuid };
-        l.push((h, Box::new(f.clone())));
+        let h = ListenerHandle { ptr: ptr1, ptr_bk: ptr1, uuid };
+        l.push((h.clone(), Box::new(f.clone())));
+        for it in l.iter() {
+            println!("it: {}", it.0.ptr);
+        }
 
-        &l[l.len() - 1].0
+        println!("reg_1 {} - {}", ptr1, &l[l.len() - 1].0 as *const ListenerHandle as usize);
+        h
     };
 
     f();
 
     ListenerHandleRef {
+        ptr1: t1.get_ptr(),
         handles: vec![h1],
         from: thread_index(),
     }
@@ -89,10 +105,11 @@ where
         }
 
         let l = l.get_mut(&ptr1).unwrap();
-        let h = ListenerHandle { ptr: ptr1, uuid };
-        l.push((h, Box::new(f.clone())));
+        let h = ListenerHandle { ptr: ptr1, ptr_bk: ptr1, uuid };
+        l.push((h.clone(), Box::new(f.clone())));
 
-        &l[l.len() - 1].0
+        println!("reg_2 {}", &l[l.len() - 1].0 as *const ListenerHandle as usize);
+        h
     };
 
     let h2 = {
@@ -103,15 +120,17 @@ where
         }
 
         let l = l.get_mut(&ptr2).unwrap();
-        let h = ListenerHandle { ptr: ptr2, uuid };
-        l.push((h, Box::new(f.clone())));
+        let h = ListenerHandle { ptr: ptr2, ptr_bk: ptr2, uuid };
+        l.push((h.clone(), Box::new(f.clone())));
 
-        &l[l.len() - 1].0
+        println!("reg_2 {}", &l[l.len() - 1].0 as *const ListenerHandle as usize);
+        h
     };
 
     f();
 
     ListenerHandleRef {
+        ptr1: t1.get_ptr(),
         handles: vec![h1, h2],
         from: thread_index(),
     }
@@ -134,28 +153,28 @@ pub fn ensure_empty_dirties() {
 
     for i in 0..THREADS {
         assert!(d.get(i).len() == 0);
-        assert!(l.get(i).len() == 0);
+        // assert!(l.get(i).len() == 0);
     }
 }
 
 pub fn drop_dirties() {
-    // let d = get_dirties();
-    // let l = get_listeners();
+    let d = get_dirties();
+    let l = get_listeners();
 
-    // println!();
-    // println!(
-    //     "DROP DIRTIES {} {} {}",
-    //     d.get(0).len(),
-    //     d.get(1).len(),
-    //     d.get(2).len()
-    // );
-    // println!(
-    //     "DROP LISTENERS {} {} {}",
-    //     l.get(0).len(),
-    //     l.get(1).len(),
-    //     l.get(2).len()
-    // );
-    // println!();
+    println!();
+    println!(
+        "DROP DIRTIES {} {} {}",
+        d.get(0).len(),
+        d.get(1).len(),
+        d.get(2).len()
+    );
+    println!(
+        "DROP LISTENERS {} {} {}",
+        l.get(0).len(),
+        l.get(1).len(),
+        l.get(2).len()
+    );
+    println!();
 
     unsafe {
         DIRTIES = None;

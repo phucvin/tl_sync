@@ -132,7 +132,7 @@ impl Item {
     }
 
     fn setup(&self, on_upgrade_item: &VerifyAction<String>) {
-        self.defer(register_listener_1(&self.on_use.trigger, {
+        self.defer(register_listener_2(&self.on_use.verified, &self.on_use.trigger, {
             let this = self.clone_weak();
             move || {
                 let mut required_value = 0;
@@ -149,18 +149,18 @@ impl Item {
             }
         }));
 
-        self.defer(register_listener_2(&on_upgrade_item.verified, &self.on_use.verified, {
+        self.defer(register_listener_2(&self.on_use.trigger, &self.on_use.verified, {
             let this = self.clone_weak();
-            let on_upgrade_item = on_upgrade_item.clone();
+            // let on_upgrade_item = on_upgrade_item.clone();
             move || {
                 let mut inc = 0;
                 let mut dec = 0;
 
-                for it in on_upgrade_item.verified.iter() {
-                    if *it == this.id {
-                        inc += 10;
-                    }
-                }
+                // for it in on_upgrade_item.verified.iter() {
+                //     if *it == this.id {
+                //         inc += 10;
+                //     }
+                // }
 
                 for it in this.on_use.verified.iter() {
                     dec += it;
