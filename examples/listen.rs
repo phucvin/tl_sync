@@ -7,33 +7,8 @@ fn main() {
     init_dirties();
     {
         let thing: Tl<String> = Tl::new("banana".into());
-        let decoy: Tl<String> = Tl::new("wood".into());
 
         let _must_live = register_listener_1(&thing, {
-            let thing = thing.clone();
-
-            move || {
-                println!("thing changed to: {}", *thing);
-            }
-        });
-
-        let _must_live_2 = register_listener_1(&thing, {
-            let thing = thing.clone();
-
-            move || {
-                println!("thing changed to: {}", *thing);
-            }
-        });
-
-        let _must_live_3 = register_listener_1(&thing, {
-            let thing = thing.clone();
-
-            move || {
-                println!("thing changed to: {}", *thing);
-            }
-        });
-
-        let _must_live_4 = register_listener_1(&thing, {
             let thing = thing.clone();
 
             move || {
